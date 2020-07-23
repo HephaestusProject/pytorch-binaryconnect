@@ -98,7 +98,7 @@ class BinaryLinear(torch.autograd.Function):
             if bias is not None and ctx.needs_input_grad[2]:
                 grad_bias = grad_output.sum(0).squeeze(0)
 
-        return grad_input, grad_weight, grad_bias
+        return grad_input, grad_weight, grad_bias, None
 
 
 binary_linear = BinaryLinear.apply

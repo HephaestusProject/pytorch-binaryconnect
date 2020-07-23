@@ -184,3 +184,146 @@ def test_backward_op_in_non_bias_deterministic_binarized_linear():
                           rtol=1e-04,
                           atol=1e-04,
                           equal_nan=True)
+
+
+def test_backward_op_in_bias_deterministic_binarized_linear():
+    pytorch_lightning.seed_everything(777)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    inputs = torch.tensor([[1., 1., 1.],
+                           [1., 1., 1.],
+                           [1., 1., 1.]], requires_grad=True)
+
+    weights = torch.tensor([[1., -.8, .3]], requires_grad=True)
+    bias = torch.tensor([1])
+
+    target = torch.tensor([[0.],
+                           [1.],
+                           [0.]])
+
+    result = binary_linear(inputs,
+                           weights,
+                           bias,
+                           "deterministic")
+
+    loss = torch.nn.functional.mse_loss(result, target)
+    loss.backward()
+
+    # frac{partial{loss}}{partial{result}} = [[1.33], [0.66], [1.33]]
+    # frac{partial{result}}{partial{weights}}   =   [[1., 1., 1.],
+    #                                                [1., 1., 1.],
+    #                                                [1., 1., 1.]]
+    # frac{partial{result}}{partial{inputs}}    =   [[1.0, -1.0, 1.0]]
+
+    target_backward_op_weights_grad = torch.tensor([[3.3333, 3.3333, 3.3333]])
+    target_backward_op_inputs_grad = torch.tensor([[1.3333, -1.3333,  1.3333],
+                                                   [0.6667, -0.6667,  0.6667],
+                                                   [1.3333, -1.3333,  1.3333]])
+
+    assert torch.allclose(input=weights.grad,
+                          other=target_backward_op_weights_grad,
+                          rtol=1e-04,
+                          atol=1e-04,
+                          equal_nan=True)
+
+    assert torch.allclose(input=inputs.grad,
+                          other=target_backward_op_inputs_grad,
+                          rtol=1e-04,
+                          atol=1e-04,
+                          equal_nan=True)
+
+
+def test_backward_op_in_non_bias_stochastic_binarized_linear():
+    pytorch_lightning.seed_everything(777)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    inputs = torch.tensor([[1., 1., 1.],
+                           [1., 1., 1.],
+                           [1., 1., 1.]], requires_grad=True)
+
+    weights = torch.tensor([[1., -.8, .3]], requires_grad=True)
+
+    target = torch.tensor([[0.],
+                           [1.],
+                           [0.]])
+
+    result = binary_linear(inputs,
+                           weights,
+                           None,
+                           "stochastic")
+
+    loss = torch.nn.functional.mse_loss(result, target)
+    loss.backward()
+
+    # frac{partial{loss}}{partial{result}} = [[0.66], [0.], [0.66]]
+    # frac{partial{result}}{partial{weights}}   =   [[1., 1., 1.],
+    #                                                [1., 1., 1.],
+    #                                                [1., 1., 1.]]
+    # frac{partial{result}}{partial{inputs}}    =   [[1.0, -1.0, 1.0]]
+
+    target_backward_op_weights_grad = torch.tensor([[1.3333, 1.3333, 1.3333]])
+    target_backward_op_inputs_grad = torch.tensor([[0.6667, -0.6667,  0.6667],
+                                                   [0.0000, -0.0000,  0.0000],
+                                                   [0.6667, -0.6667,  0.6667]])
+
+    assert torch.allclose(input=weights.grad,
+                          other=target_backward_op_weights_grad,
+                          rtol=1e-04,
+                          atol=1e-04,
+                          equal_nan=True)
+
+    assert torch.allclose(input=inputs.grad,
+                          other=target_backward_op_inputs_grad,
+                          rtol=1e-04,
+                          atol=1e-04,
+                          equal_nan=True)
+
+
+def test_backward_op_in_bias_stochastic_binarized_linear():
+    pytorch_lightning.seed_everything(777)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    inputs = torch.tensor([[1., 1., 1.],
+                           [1., 1., 1.],
+                           [1., 1., 1.]], requires_grad=True)
+
+    weights = torch.tensor([[1., -.8, .3]], requires_grad=True)
+    bias = torch.tensor([1])
+
+    target = torch.tensor([[0.],
+                           [1.],
+                           [0.]])
+
+    result = binary_linear(inputs,
+                           weights,
+                           bias,
+                           "stochastic")
+
+    loss = torch.nn.functional.mse_loss(result, target)
+    loss.backward()
+
+    # frac{partial{loss}}{partial{result}} = [[1.33], [0.66], [1.33]]
+    # frac{partial{result}}{partial{weights}}   =   [[1., 1., 1.],
+    #                                                [1., 1., 1.],
+    #                                                [1., 1., 1.]]
+    # frac{partial{result}}{partial{inputs}}    =   [[1.0, -1.0, 1.0]]
+
+    target_backward_op_weights_grad = torch.tensor([[3.3333, 3.3333, 3.3333]])
+    target_backward_op_inputs_grad = torch.tensor([[1.3333, -1.3333,  1.3333],
+                                                   [0.6667, -0.6667,  0.6667],
+                                                   [1.3333, -1.3333,  1.3333]])
+
+    assert torch.allclose(input=weights.grad,
+                          other=target_backward_op_weights_grad,
+                          rtol=1e-04,
+                          atol=1e-04,
+                          equal_nan=True)
+
+    assert torch.allclose(input=inputs.grad,
+                          other=target_backward_op_inputs_grad,
+                          rtol=1e-04,
+                          atol=1e-04,
+                          equal_nan=True)
