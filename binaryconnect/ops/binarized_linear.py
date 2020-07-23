@@ -1,5 +1,6 @@
+from typing import Any, Optional
+
 import torch
-from typing import (Optional, Any)
 
 
 class BinaryLinear(torch.autograd.Function):
@@ -12,11 +13,13 @@ class BinaryLinear(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(ctx: object,
-                input: torch.Tensor,
-                weight: torch.Tensor,
-                bias: Optional[torch.Tensor] = None,
-                mode: Optional[str] = "deterministic") -> torch.Tensor:
+    def forward(
+        ctx: object,
+        input: torch.Tensor,
+        weight: torch.Tensor,
+        bias: Optional[torch.Tensor] = None,
+        mode: Optional[str] = "deterministic",
+    ) -> torch.Tensor:
         r"""
         Binary forward operation을 정의한다.
 
@@ -56,7 +59,7 @@ class BinaryLinear(torch.autograd.Function):
                 p = torch.sigmoid(weight)
                 uniform_matrix = torch.empty(p.shape).uniform_(0, 1)
                 bin_weight = (p >= uniform_matrix).type(torch.float32)
-                bin_weight[bin_weight == 0] = -1.
+                bin_weight[bin_weight == 0] = -1.0
             else:
                 raise RuntimeError(f"{mode} not supported")
 
@@ -70,8 +73,7 @@ class BinaryLinear(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx: object,
-                 grad_output: Any):
+    def backward(ctx: object, grad_output: Any):
         r"""
         Binary backward operation을 정의한다.
 
