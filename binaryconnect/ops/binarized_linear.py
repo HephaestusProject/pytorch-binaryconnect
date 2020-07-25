@@ -88,7 +88,7 @@ class BinaryLinear(torch.autograd.Function):
             (torch.Tensor) : Computational graph 앞으로 보내기위한 gradient 정보
         """
 
-        input, bin_weight, bias = ctx.saved_variables
+        input, bin_weight, bias = ctx.saved_tensors
 
         grad_input = grad_weight = grad_bias = None
 
