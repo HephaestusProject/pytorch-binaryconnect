@@ -180,9 +180,6 @@ def test_backward_op_in_non_bias_stochastic_binarized_linear(fix_seed):
     result = binary_linear(inputs, weights, None, "stochastic")
     result.sum().backward()
 
-    print(weights.grad)
-    print(inputs.grad)
-
     target_backward_op_weights_grad = torch.tensor([[3., 3., 3.]])
     target_backward_op_inputs_grad = torch.tensor(
         [
