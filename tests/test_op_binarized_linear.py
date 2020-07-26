@@ -223,24 +223,46 @@ def test_backward_op_in_bias_stochastic_binarized_linear(fix_seed):
     )
 
 
-def test_backward(fix_seed):
+def test_backward_with(fix_seed):
     from binaryconnect.ops.binarized_linear import BinaryLinear
 
     class CTX:
         saved_tensors = (torch.tensor([[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]], requires_grad=True),
                          torch.tensor([[1., -1.,  1.]]),
-                         None)
-        needs_input_grad = (True, True, False, False)
+                         torch.tensor([1]))
+        needs_input_grad = (True, True, True, False)
 
     ctx = CTX()
     grad_output = torch.tensor([[1.], [1.], [1.]])
-    _, grad, _, _ = BinaryLinear.backward(ctx, grad_output)
+
+    input_grad, weight_gard, bias_grad, _ = BinaryLinear.backward(
+        ctx, grad_output)
 
     target_backward_op_weights_grad = torch.tensor([[3., 3., 3.]])
+    target_backward_op_inputs_grad = torch.tensor([[1., -1.,  1.],
+                                                   [1., -1.,  1.],
+                                                   [1., -1.,  1.]])
+    target_backward_op_bias_grad = torch.tensor(3.)
 
     assert torch.allclose(
-        input=grad,
+        input=weight_gard,
         other=target_backward_op_weights_grad,
+        rtol=1e-04,
+        atol=1e-04,
+        equal_nan=True,
+    )
+
+    assert torch.allclose(
+        input=input_grad,
+        other=target_backward_op_inputs_grad,
+        rtol=1e-04,
+        atol=1e-04,
+        equal_nan=True,
+    )
+
+    assert torch.allclose(
+        input=bias_grad,
+        other=target_backward_op_bias_grad,
         rtol=1e-04,
         atol=1e-04,
         equal_nan=True,
