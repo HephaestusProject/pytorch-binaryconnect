@@ -223,9 +223,7 @@ def test_backward_op_in_bias_stochastic_binarized_linear(fix_seed):
     )
 
 
-def test_backward_with(fix_seed):
-    from binaryconnect.ops.binarized_linear import BinaryLinear
-
+def test_backward(fix_seed):
     class CTX:
         saved_tensors = (torch.tensor([[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]], requires_grad=True),
                          torch.tensor([[1., -1.,  1.]]),
