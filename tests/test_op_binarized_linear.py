@@ -15,6 +15,15 @@ def fix_seed():
     torch.backends.cudnn.benchmark = False
 
 
+def test_not_support_mode_binarized_linear(fix_seed):
+    inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
+    weights = torch.tensor(
+        [[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
+
+    with pytest.raises(RuntimeError):
+        binary_linear(inputs, weights, None, "test")
+
+
 def test_foward_op_in_non_bias_deterministic_binarized_linear(fix_seed):
     inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
 
@@ -101,19 +110,14 @@ def test_foward_op_in_bias_stochastic_binarized_linear(fix_seed):
 
 def test_backward_op_in_non_bias_deterministic_binarized_linear(fix_seed):
     inputs = torch.tensor(
-        [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], requires_grad=True
+        [[1.0, 1.0, 1.0]], requires_grad=True
     )
+    weights = torch.tensor([[-0.8, -0.8, 0.3]], requires_grad=True)
 
-    weights = torch.tensor([[1.0, -0.8, 0.3]], requires_grad=True)
+    binary_linear(inputs, weights, None, "deterministic").backward()
 
-    result = binary_linear(inputs, weights, None, "deterministic")
-
-    result.sum().backward()
-
-    target_backward_op_weights_grad = torch.tensor([[3., 3., 3.]])
-    target_backward_op_inputs_grad = torch.tensor([[1., -1.,  1.],
-                                                   [1., -1.,  1.],
-                                                   [1., -1.,  1.]])
+    target_backward_op_weights_grad = torch.tensor([[1., 1., 1.]])
+    target_backward_op_inputs_grad = torch.tensor([[-1., -1.,  1.]])
 
     assert torch.allclose(
         input=weights.grad,
@@ -135,23 +139,16 @@ def test_backward_op_in_non_bias_deterministic_binarized_linear(fix_seed):
 def test_backward_op_in_bias_deterministic_binarized_linear(fix_seed):
 
     inputs = torch.tensor(
-        [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], requires_grad=True
+        [[1.0, 1.0, 1.0]], requires_grad=True
     )
 
     weights = torch.tensor([[1.0, -0.8, 0.3]], requires_grad=True)
     bias = torch.tensor([1])
 
-    result = binary_linear(inputs, weights, bias, "deterministic")
-    result.sum().backward()
+    binary_linear(inputs, weights, bias, "deterministic").backward()
 
-    target_backward_op_weights_grad = torch.tensor([[3., 3., 3.]])
-    target_backward_op_inputs_grad = torch.tensor(
-        [
-            [1., -1.,  1.],
-            [1., -1.,  1.],
-            [1., -1.,  1.]
-        ]
-    )
+    target_backward_op_weights_grad = torch.tensor([[1., 1., 1.]])
+    target_backward_op_inputs_grad = torch.tensor([[1., -1.,  1.]])
 
     assert torch.allclose(
         input=weights.grad,
@@ -172,22 +169,13 @@ def test_backward_op_in_bias_deterministic_binarized_linear(fix_seed):
 
 def test_backward_op_in_non_bias_stochastic_binarized_linear(fix_seed):
 
-    inputs = torch.tensor(
-        [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], requires_grad=True
-    )
+    inputs = torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True)
     weights = torch.tensor([[1.0, -0.8, 0.3]], requires_grad=True)
 
-    result = binary_linear(inputs, weights, None, "stochastic")
-    result.sum().backward()
+    binary_linear(inputs, weights, None, "stochastic").backward()
 
-    target_backward_op_weights_grad = torch.tensor([[3., 3., 3.]])
-    target_backward_op_inputs_grad = torch.tensor(
-        [
-            [-1., -1., -1.],
-            [-1., -1., -1.],
-            [-1., -1., -1.]
-        ]
-    )
+    target_backward_op_weights_grad = torch.tensor([[1., 1., 1.]])
+    target_backward_op_inputs_grad = torch.tensor([[-1., -1., -1.]])
 
     assert torch.allclose(
         input=weights.grad,
@@ -208,24 +196,15 @@ def test_backward_op_in_non_bias_stochastic_binarized_linear(fix_seed):
 
 def test_backward_op_in_bias_stochastic_binarized_linear(fix_seed):
 
-    inputs = torch.tensor(
-        [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], requires_grad=True
-    )
+    inputs = torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True)
 
     weights = torch.tensor([[1.0, -0.8, 0.3]], requires_grad=True)
     bias = torch.tensor([1])
 
-    result = binary_linear(inputs, weights, bias, "stochastic")
-    result.sum().backward()
+    binary_linear(inputs, weights, bias, "stochastic").backward()
 
-    target_backward_op_weights_grad = torch.tensor([[3., 3., 3.]])
-    target_backward_op_inputs_grad = torch.tensor(
-        [
-            [1., -1.,  1.],
-            [1., -1.,  1.],
-            [1., -1.,  1.]
-        ]
-    )
+    target_backward_op_weights_grad = torch.tensor([[1., 1., 1.]])
+    target_backward_op_inputs_grad = torch.tensor([[1., -1.,  1.]])
 
     assert torch.allclose(
         input=weights.grad,
