@@ -5,7 +5,7 @@ import pytest
 import pytorch_lightning
 import torch
 
-from src.ops.binarized_linear import binary_linear
+from src.ops.binarized_linear import (BinaryLinear, binary_linear)
 
 
 @pytest.fixture(scope="module")
@@ -27,7 +27,8 @@ def test_not_support_mode_binarized_linear(fix_seed):
 def test_foward_op_in_non_bias_deterministic_binarized_linear(fix_seed):
     inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
 
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
+    weights = torch.tensor(
+        [[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
 
     result = binary_linear(inputs, weights, None, "deterministic")
 
@@ -44,9 +45,11 @@ def test_foward_op_in_bias_deterministic_binarized_linear(fix_seed):
 
     inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
 
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
+    weights = torch.tensor(
+        [[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
 
-    result = binary_linear(inputs, weights, torch.tensor([1.0]), "deterministic")
+    result = binary_linear(
+        inputs, weights, torch.tensor([1.0]), "deterministic")
 
     target_forward_op = torch.tensor(
         [[2.0, 2.0, 2.0], [2.0, 2.0, 2.0], [2.0, 2.0, 2.0]]
@@ -60,7 +63,8 @@ def test_foward_op_in_bias_deterministic_binarized_linear(fix_seed):
 def test_foward_op_in_non_bias_stochastic_binarized_linear(fix_seed):
     inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
 
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
+    weights = torch.tensor(
+        [[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
 
     result = binary_linear(inputs, weights, None, "stochastic")
 
@@ -77,7 +81,8 @@ def test_foward_op_in_bias_stochastic_binarized_linear(fix_seed):
 
     inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
 
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
+    weights = torch.tensor(
+        [[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
 
     result = binary_linear(inputs, weights, torch.tensor([1.0]), "stochastic")
 
@@ -219,7 +224,6 @@ def test_backward_op_in_bias_stochastic_binarized_linear(fix_seed):
 
 
 def test_backward(fix_seed):
-    from binaryconnect.ops.binarized_linear import BinaryLinear
 
     class CTX:
         saved_tensors = (torch.tensor([[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]], requires_grad=True),
