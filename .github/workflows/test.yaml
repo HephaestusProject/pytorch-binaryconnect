@@ -48,7 +48,7 @@ jobs:
               uses: 8398a7/action-slack@v3
               with:
                   status: ${{job.status}}
-                  fields: repo,message,commit,author,action,eventName,ref,workflow
+                  fields: repo,commit,author,workflow
                   author_name: PR Notification
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # required
