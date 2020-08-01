@@ -23,7 +23,7 @@ class BinaryConv2d(torch.autograd.Function):
             padding:    Union[int, Tuple[int, int]] = 0,
             dilation:   Union[int, Tuple[int, int]] = 1,
             groups:     int = 1,
-            mode:       str = "determistic"
+            mode:       str = "deterministic"
     ) -> torch.Tensor:
         r"""
         Binary forward operation을 정의한다.
@@ -74,8 +74,9 @@ class BinaryConv2d(torch.autograd.Function):
                 raise RuntimeError(f"{mode} not supported")
 
         with torch.no_grad():
-            output = F.conv2d(input, bin_weight, bias, stride,
-                              padding, dilation, groups)
+            output = F.conv2d(input, bin_weight, bias,
+                              stride, padding, dilation,
+                              groups)
 
         # Save input, binarized weight, bias in context object
         ctx.save_for_backward(input, bin_weight, bias)
