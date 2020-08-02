@@ -95,19 +95,6 @@ def test_foward_op_in_bias_stochastic_binarized_linear(fix_seed):
     )
 
 
-# Gradient Check
-# loss  = (result - target)^2
-# A = frac{partial{loss}}{partial{result}}
-#   = 2(result - target) / N(`size`)
-# B = frac{partial{result}}{partial{weights}}
-#   = inputs
-# C = frac{partial{result}}{partial{inputs}}
-#   = binarized_weights
-
-# gradient of weights   = A * B
-# gradient of inputs    = A * C
-
-
 def test_backward_op_in_non_bias_deterministic_binarized_linear(fix_seed):
     inputs = torch.tensor(
         [[1.0, 1.0, 1.0]], requires_grad=True
