@@ -53,5 +53,4 @@ class BinarizedLinear(torch.nn.Linear):
         we have chosen to clip the real-valued weights within the [−1, 1] interval right after the weight updates, 
         """
         with torch.no_grad():
-            self.weight.clamp_(min=-1.0,
-                               max=1.0)
+            self.weight.clamp_(min=-1.0, max=1.0)

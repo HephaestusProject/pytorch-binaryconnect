@@ -52,5 +52,5 @@ def test_forward_clipping(fix_seed):
     model(inputs)
 
     with torch.no_grad():
-        assert(model.weight.min() >= torch.tensor(-1.))
-        assert(model.weight.max() <= torch.tensor(1.))
+        assert model.weight.min() >= torch.tensor(-1.0)
+        assert model.weight.max() <= torch.tensor(1.0)
