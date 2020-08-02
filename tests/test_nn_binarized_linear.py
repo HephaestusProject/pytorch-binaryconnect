@@ -15,7 +15,7 @@ def fix_seed():
     torch.backends.cudnn.benchmark = False
 
 
-def test_forward_with_bias(fix_seed):
+def test_forward_without_bias(fix_seed):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     mode = "determistic"
 
