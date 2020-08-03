@@ -1,5 +1,7 @@
+
 import torch
 
+from typing import Optional
 from src.ops.binarized_linear import binary_linear
 
 
@@ -36,7 +38,11 @@ class BinarizedLinear(torch.nn.Linear):
         torch.Size([128, 30])
     """
 
-    def __init__(self, in_features, out_features, bias=True, mode="determistic"):
+    def __init__(self,
+                 in_features: int,
+                 out_features: int,
+                 bias: Optional[torch.Tensor] = None,
+                 mode: str = "determistic") -> torch.nn.Linear:
         super().__init__(in_features, out_features, bias)
         self.mode = mode
 
