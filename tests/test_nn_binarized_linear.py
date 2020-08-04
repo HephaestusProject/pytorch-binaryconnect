@@ -17,7 +17,7 @@ def fix_seed():
 
 def test_forward_without_bias(fix_seed):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mode = "determistic"
+    mode = "deterministic"
 
     inputs = torch.rand((1, 10)).to(device)
     model = BinarizedLinear(10, 20, bias=False, mode=mode).to(device)
@@ -29,7 +29,7 @@ def test_forward_without_bias(fix_seed):
 
 def test_forward_with_bias(fix_seed):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mode = "determistic"
+    mode = "deterministic"
 
     inputs = torch.rand((1, 10)).to(device)
     model = BinarizedLinear(10, 20, bias=True, mode=mode).to(device)
@@ -41,7 +41,7 @@ def test_forward_with_bias(fix_seed):
 
 def test_forward_clipping(fix_seed):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mode = "determistic"
+    mode = "deterministic"
 
     inputs = torch.rand((1, 10)).to(device)
     model = BinarizedLinear(10, 20, bias=False, mode=mode).to(device)

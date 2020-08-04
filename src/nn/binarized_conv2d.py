@@ -52,14 +52,14 @@ class BinarizedConv2d(torch.nn.Conv2d):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         self.clipping()
-        return binarized_conv2d(input,
-                                self.weight,
-                                self.bias,
-                                self.stride,
-                                self.padding,
-                                self.dilation,
-                                self.groups,
-                                self.mode)
+        return binary_conv2d(input,
+                             self.weight,
+                             self.bias,
+                             self.stride,
+                             self.padding,
+                             self.dilation,
+                             self.groups,
+                             self.mode)
 
     def clipping(self):
         """
