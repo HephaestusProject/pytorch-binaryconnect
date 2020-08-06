@@ -20,16 +20,18 @@ def test_forward_without_bias(fix_seed):
     mode = "deterministic"
 
     inputs = torch.rand((1, 1, 3, 3)).to(device)
-    model = BinarizedConv2d(in_channels=1,
-                            out_channels=1,
-                            kernel_size=3,
-                            stride=1,
-                            padding=0,
-                            dilation=1,
-                            groups=1,
-                            bias=None,
-                            padding_mode="zeros",
-                            mode=mode).to(device)
+    model = BinarizedConv2d(
+        in_channels=1,
+        out_channels=1,
+        kernel_size=3,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        bias=None,
+        padding_mode="zeros",
+        mode=mode,
+    ).to(device)
 
     output = model(inputs)
 
@@ -41,16 +43,18 @@ def test_forward_with_bias(fix_seed):
     mode = "deterministic"
 
     inputs = torch.rand((1, 1, 3, 3)).to(device)
-    model = BinarizedConv2d(in_channels=1,
-                            out_channels=1,
-                            kernel_size=3,
-                            stride=1,
-                            padding=0,
-                            dilation=1,
-                            groups=1,
-                            bias=True,
-                            padding_mode="zeros",
-                            mode=mode).to(device)
+    model = BinarizedConv2d(
+        in_channels=1,
+        out_channels=1,
+        kernel_size=3,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        bias=True,
+        padding_mode="zeros",
+        mode=mode,
+    ).to(device)
 
     output = model(inputs)
 
@@ -62,21 +66,23 @@ def test_forward_clipping(fix_seed):
     mode = "deterministic"
 
     inputs = torch.rand((1, 1, 3, 3)).to(device)
-    model = BinarizedConv2d(in_channels=1,
-                            out_channels=1,
-                            kernel_size=3,
-                            stride=1,
-                            padding=0,
-                            dilation=1,
-                            groups=1,
-                            bias=True,
-                            padding_mode="zeros",
-                            mode=mode).to(device)
+    model = BinarizedConv2d(
+        in_channels=1,
+        out_channels=1,
+        kernel_size=3,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups=1,
+        bias=True,
+        padding_mode="zeros",
+        mode=mode,
+    ).to(device)
     with torch.no_grad():
         model.weight.mul_(100)
 
     output = model(inputs)
 
     with torch.no_grad():
-        assert(model.weight.min() >= torch.tensor(-1.))
-        assert(model.weight.max() >= torch.tensor(1.))
+        assert model.weight.min() >= torch.tensor(-1.0)
+        assert model.weight.max() >= torch.tensor(1.0)

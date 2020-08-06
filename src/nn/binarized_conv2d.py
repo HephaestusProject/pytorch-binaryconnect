@@ -1,6 +1,7 @@
+from typing import Optional, Tuple, Union
+
 import torch
 
-from typing import Optional, Tuple, Union
 from src.ops.binarized_conv2d import binary_conv2d
 
 
@@ -23,26 +24,30 @@ class BinarizedConv2d(torch.nn.Conv2d):
     width in pixels.
     """
 
-    def __init__(self,
-                 in_channels: int,
-                 out_channels: int,
-                 kernel_size: Union[int, Tuple[int, int]],
-                 stride: Union[int, Tuple[int, int]] = 1,
-                 padding: Union[int, Tuple[int, int]] = 0,
-                 dilation: Union[int, Tuple[int, int]] = 1,
-                 groups: int = 1,
-                 bias: Optional[torch.Tensor] = None,
-                 padding_mode: str = 'zeros',
-                 mode: str = "stochastic") -> torch.nn.Conv2d:
-        super().__init__(in_channels,
-                         out_channels,
-                         kernel_size,
-                         stride,
-                         padding,
-                         dilation,
-                         groups,
-                         bias,
-                         padding_mode)
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple[int, int]],
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        groups: int = 1,
+        bias: Optional[torch.Tensor] = None,
+        padding_mode: str = "zeros",
+        mode: str = "stochastic",
+    ) -> torch.nn.Conv2d:
+        super().__init__(
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+            padding_mode,
+        )
 
         self.stride = stride
         self.padding = padding
@@ -52,14 +57,16 @@ class BinarizedConv2d(torch.nn.Conv2d):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         self.clipping()
-        return binary_conv2d(input,
-                             self.weight,
-                             self.bias,
-                             self.stride,
-                             self.padding,
-                             self.dilation,
-                             self.groups,
-                             self.mode)
+        return binary_conv2d(
+            input,
+            self.weight,
+            self.bias,
+            self.stride,
+            self.padding,
+            self.dilation,
+            self.groups,
+            self.mode,
+        )
 
     def clipping(self):
         """
@@ -68,5 +75,4 @@ class BinarizedConv2d(torch.nn.Conv2d):
         we have chosen to clip the real-valued weights within the [−1, 1] interval right after the weight updates, 
         """
         with torch.no_grad():
-            self.weight.clamp_(min=-1.0,
-                               max=1.0)
+            self.weight.clamp_(min=-1.0, max=1.0)
