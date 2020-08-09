@@ -5,7 +5,7 @@ import pytest
 import pytorch_lightning
 import torch
 
-from src.ops.binarized_linear import BinaryLinear, binary_linear
+from src.ops.binarized_linear import BinarizedLinear, binarized_linear
 
 
 @pytest.fixture(scope="module")
@@ -33,7 +33,7 @@ def test_supported_mode(fix_seed,
                         test_bias,
                         test_mode):
     with pytest.raises(RuntimeError):
-        binary_linear(test_input, test_weight, test_bias, test_mode)
+        binarized_linear(test_input, test_weight, test_bias, test_mode)
 
 
 forward_test_case = [
@@ -96,7 +96,7 @@ def test_forward(fix_seed,
                  test_bias,
                  test_mode,
                  expected):
-    assert torch.allclose(input=binary_linear(test_input, test_weight, test_bias, test_mode),
+    assert torch.allclose(input=binarized_linear(test_input, test_weight, test_bias, test_mode),
                           other=expected,
                           rtol=1e-04,
                           atol=1e-04,
@@ -153,7 +153,7 @@ def test_backward_indirectly(fix_seed,
                              expected_weight_grad,
                              expected_input_grad):
 
-    binary_linear(test_input, test_weight, test_bias, test_mode).backward()
+    binarized_linear(test_input, test_weight, test_bias, test_mode).backward()
 
     assert torch.allclose(
         input=test_input.grad,
@@ -210,7 +210,7 @@ def test_backward_directly(fix_seed,
 
     ctx = CTX(saved_tensors, needs_input_grad)
 
-    input_grad, weight_grad, bias_grad, _ = BinaryLinear.backward(
+    input_grad, weight_grad, bias_grad, _ = BinarizedLinear.backward(
         ctx, grad_output)
 
     assert torch.allclose(

@@ -2,7 +2,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from src.ops.binarized_conv2d import binary_conv2d
+from src.ops.binarized_conv2d import binarized_conv2d
 
 
 class BinarizedConv2d(torch.nn.Conv2d):
@@ -57,7 +57,7 @@ class BinarizedConv2d(torch.nn.Conv2d):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         self.clipping()
-        return binary_conv2d(
+        return binarized_conv2d(
             input,
             self.weight,
             self.bias,

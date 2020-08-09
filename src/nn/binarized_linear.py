@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from src.ops.binarized_linear import binary_linear
+from src.ops.binarized_linear import binarized_linear
 
 
 class BinarizedLinear(torch.nn.Linear):
@@ -51,8 +51,8 @@ class BinarizedLinear(torch.nn.Linear):
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         self.clipping()
         if self.bias is not None:
-            return binary_linear(input, self.weight, self.bias)
-        return binary_linear(input, self.weight)
+            return binarized_linear(input, self.weight, self.bias)
+        return binarized_linear(input, self.weight)
 
     def clipping(self):
         """

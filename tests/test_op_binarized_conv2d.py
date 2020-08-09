@@ -5,7 +5,7 @@ import pytest
 import pytorch_lightning
 import torch
 
-from src.ops.binarized_conv2d import BinaryConv2d, binary_conv2d
+from src.ops.binarized_conv2d import BinarizedConv2d, binarized_conv2d
 
 
 @pytest.fixture(scope="module")
@@ -36,8 +36,8 @@ def test_supported_mode(fix_seed,
                         test_bias,
                         test_mode):
     with pytest.raises(RuntimeError):
-        binary_conv2d(test_input, test_weight,
-                      test_bias, 1, 0, 1, 1, test_mode)
+        binarized_conv2d(test_input, test_weight,
+                         test_bias, 1, 0, 1, 1, test_mode)
 
 
 forward_test_case = [
@@ -97,7 +97,7 @@ def test_forward(fix_seed,
                  test_mode,
                  expected):
 
-    assert torch.allclose(input=binary_conv2d(test_input, test_weight, test_bias, 1, 0, 1, 1, test_mode),
+    assert torch.allclose(input=binarized_conv2d(test_input, test_weight, test_bias, 1, 0, 1, 1, test_mode),
                           other=expected,
                           rtol=1e-04,
                           atol=1e-04,
@@ -183,8 +183,8 @@ def test_backward_indirectly(fix_seed,
                              expected_weight_grad,
                              expected_input_grad):
 
-    binary_conv2d(test_input, test_weight, test_bias,
-                  1, 0, 1, 1, test_mode).backward()
+    binarized_conv2d(test_input, test_weight, test_bias,
+                     1, 0, 1, 1, test_mode).backward()
 
     assert torch.allclose(
         input=test_input.grad,
@@ -247,7 +247,7 @@ def test_backward_directly(fix_seed,
 
     ctx = CTX(saved_tensors, needs_input_grad)
 
-    input_grad, weight_grad, bias_grad, _, _, _, _, _ = BinaryConv2d.backward(
+    input_grad, weight_grad, bias_grad, _, _, _, _, _ = BinarizedConv2d.backward(
         ctx, grad_output)
 
     assert torch.allclose(
