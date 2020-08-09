@@ -28,7 +28,8 @@ mode_test_case = [
 ]
 
 
-@ pytest.mark.parametrize("test_input, test_weight, test_bias, test_mode", mode_test_case)
+@ pytest.mark.parametrize("test_input, test_weight, test_bias, test_mode",
+                          mode_test_case)
 def test_supported_mode(fix_seed,
                         test_input,
                         test_weight,
