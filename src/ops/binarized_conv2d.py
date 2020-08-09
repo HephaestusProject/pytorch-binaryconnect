@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple, Union, List
+from typing import Any, List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -15,15 +15,15 @@ class BinaryConv2d(torch.autograd.Function):
 
     @staticmethod
     def forward(
-            ctx:        object,
-            input:      torch.Tensor,
-            weight:     torch.Tensor,
-            bias:       Optional[torch.Tensor] = None,
-            stride:     Union[int, Tuple[int, int]] = 1,
-            padding:    Union[int, Tuple[int, int]] = 0,
-            dilation:   Union[int, Tuple[int, int]] = 1,
-            groups:     int = 1,
-            mode:       str = "deterministic"
+        ctx: object,
+        input: torch.Tensor,
+        weight: torch.Tensor,
+        bias: Optional[torch.Tensor] = None,
+        stride: Union[int, Tuple[int, int]] = 1,
+        padding: Union[int, Tuple[int, int]] = 0,
+        dilation: Union[int, Tuple[int, int]] = 1,
+        groups: int = 1,
+        mode: str = "deterministic",
     ) -> torch.Tensor:
         r"""
         Binary forward operation을 정의한다.
@@ -55,7 +55,7 @@ class BinaryConv2d(torch.autograd.Function):
                 # torch.sign()함수는 Ternary로 Quantization 된다. [-1, 0, 1]
                 # 따라서 `0`에 대한 별도 처리를 해야 Binary weight를 가질 수 있다.
                 bin_weight = weight.sign()
-                bin_weight[bin_weight == 0] = 1.
+                bin_weight[bin_weight == 0] = 1.0
             elif mode == "stochastic":
                 # weights를 sigmoid 입력으로 넣어 이를 확률값으로 변환한다. `sigmoid(weights)`
                 # 해당 확률값을 이용하여 [-1, 1]을 생성한다.
@@ -69,14 +69,14 @@ class BinaryConv2d(torch.autograd.Function):
                 uniform_matrix = torch.empty(p.shape).uniform_(0, 1)
                 uniform_matrix = uniform_matrix.to(weight.device)
                 bin_weight = (p >= uniform_matrix).type(torch.float32)
-                bin_weight[bin_weight == 0] = -1.
+                bin_weight[bin_weight == 0] = -1.0
             else:
                 raise RuntimeError(f"{mode} not supported")
 
         with torch.no_grad():
-            output = F.conv2d(input, bin_weight, bias,
-                              stride, padding, dilation,
-                              groups)
+            output = F.conv2d(
+                input, bin_weight, bias, stride, padding, dilation, groups
+            )
 
         # Save input, binarized weight, bias in context object
         ctx.save_for_backward(input, bin_weight, bias)
@@ -88,8 +88,7 @@ class BinaryConv2d(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx:           object,
-                 grad_output:   Any) -> Tuple[Optional[torch.Tensor]]:
+    def backward(ctx: object, grad_output: Any) -> Tuple[Optional[torch.Tensor]]:
         r"""
         Binary backward operation을 정의한다.
 
@@ -112,21 +111,25 @@ class BinaryConv2d(torch.autograd.Function):
 
         with torch.no_grad():
             if ctx.needs_input_grad[0]:
-                grad_input = torch.nn.grad.conv2d_input(input.shape,
-                                                        bin_weight,
-                                                        grad_output,
-                                                        stride,
-                                                        padding,
-                                                        dilation,
-                                                        groups)
+                grad_input = torch.nn.grad.conv2d_input(
+                    input.shape,
+                    bin_weight,
+                    grad_output,
+                    stride,
+                    padding,
+                    dilation,
+                    groups,
+                )
             if ctx.needs_input_grad[1]:
-                grad_weight = torch.nn.grad.conv2d_weight(input,
-                                                          bin_weight.shape,
-                                                          grad_output,
-                                                          stride,
-                                                          padding,
-                                                          dilation,
-                                                          groups)
+                grad_weight = torch.nn.grad.conv2d_weight(
+                    input,
+                    bin_weight.shape,
+                    grad_output,
+                    stride,
+                    padding,
+                    dilation,
+                    groups,
+                )
 
             if bias is not None and ctx.needs_input_grad[2]:
                 grad_bias = grad_output.sum((0, 2, 3)).squeeze(0)

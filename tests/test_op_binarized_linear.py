@@ -5,7 +5,7 @@ import pytest
 import pytorch_lightning
 import torch
 
-from src.ops.binarized_linear import (BinaryLinear, binary_linear)
+from src.ops.binarized_linear import BinaryLinear, binary_linear
 
 
 @pytest.fixture(scope="module")
@@ -130,6 +130,7 @@ def test_backward_indirectly(fix_seed,
     assert torch.allclose(
         input=test_input.grad,
         other=expected_input_grad,
+
         rtol=1e-04,
         atol=1e-04,
         equal_nan=True,

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 
 from src.ops.binarized_linear import binary_linear
@@ -36,7 +38,13 @@ class BinarizedLinear(torch.nn.Linear):
         torch.Size([128, 30])
     """
 
-    def __init__(self, in_features, out_features, bias=True, mode="determistic"):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        bias: Optional[torch.Tensor] = None,
+        mode: str = "determistic",
+    ) -> torch.nn.Linear:
         super().__init__(in_features, out_features, bias)
         self.mode = mode
 
@@ -53,5 +61,4 @@ class BinarizedLinear(torch.nn.Linear):
         we have chosen to clip the real-valued weights within the [−1, 1] interval right after the weight updates, 
         """
         with torch.no_grad():
-            self.weight.clamp_(min=-1.0,
-                               max=1.0)
+            self.weight.clamp_(min=-1.0, max=1.0)

@@ -5,7 +5,7 @@ import pytest
 import pytorch_lightning
 import torch
 
-from src.ops.binarized_conv2d import (BinaryConv2d, binary_conv2d)
+from src.ops.binarized_conv2d import BinaryConv2d, binary_conv2d
 
 
 @pytest.fixture(scope="module")
