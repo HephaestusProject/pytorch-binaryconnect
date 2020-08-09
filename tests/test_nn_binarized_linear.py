@@ -20,28 +20,28 @@ forward_test_case = [
     ("cpu",
      torch.rand((1, 10)),
      False,
-     "determistic",
+     "deterministic",
      (1, 20)
      ),
 
     (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
      torch.rand((1, 10)),
      False,
-     "determistic",
+     "deterministic",
      (1, 20)
      ),
 
     ("cpu",
      torch.rand((1, 10)),
      True,
-     "determistic",
+     "deterministic",
      (1, 20)
      ),
 
     (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
      torch.rand((1, 10)),
      True,
-     "determistic",
+     "deterministic",
      (1, 20)
      ),
 
@@ -75,7 +75,8 @@ forward_test_case = [
 ]
 
 
-@ pytest.mark.parametrize("device, test_input, test_bias, test_mode, exptected_shape", forward_test_case)
+@ pytest.mark.parametrize("device, test_input, test_bias, test_mode, exptected_shape",
+                          forward_test_case)
 def test_forward(fix_seed,
                  device,
                  test_input,
@@ -155,7 +156,8 @@ clipping_test_case = [
 ]
 
 
-@ pytest.mark.parametrize("device, test_input, test_bias, test_mode, exptected_max_value, exptected_min_value", clipping_test_case)
+@ pytest.mark.parametrize("device, test_input, test_bias, test_mode, exptected_max_value, exptected_min_value",
+                          clipping_test_case)
 def test_clipping(fix_seed,
                   device,
                   test_input,

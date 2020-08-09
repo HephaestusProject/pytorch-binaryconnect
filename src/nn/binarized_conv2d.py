@@ -35,7 +35,7 @@ class BinarizedConv2d(torch.nn.Conv2d):
         groups: int = 1,
         bias: Optional[torch.Tensor] = None,
         padding_mode: str = "zeros",
-        mode: str = "stochastic",
+        mode: str = "deterministic",
     ) -> torch.nn.Conv2d:
         super().__init__(
             in_channels,

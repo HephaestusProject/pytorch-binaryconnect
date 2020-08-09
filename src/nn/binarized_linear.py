@@ -43,7 +43,7 @@ class BinarizedLinear(torch.nn.Linear):
         in_features: int,
         out_features: int,
         bias: Optional[torch.Tensor] = None,
-        mode: str = "determistic",
+        mode: str = "deterministic",
     ) -> torch.nn.Linear:
         super().__init__(in_features, out_features, bias)
         self.mode = mode
