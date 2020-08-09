@@ -15,42 +15,163 @@ def fix_seed():
     torch.backends.cudnn.benchmark = False
 
 
-def test_forward_without_bias(fix_seed):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mode = "determistic"
+forward_test_case = [
+    # (device, test_input, test_bias, test_mode, exptected_shape)
+    ("cpu",
+     torch.rand((1, 10)),
+     False,
+     "determistic",
+     (1, 20)
+     ),
 
-    inputs = torch.rand((1, 10)).to(device)
-    model = BinarizedLinear(10, 20, bias=False, mode=mode).to(device)
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     False,
+     "determistic",
+     (1, 20)
+     ),
 
-    output = model(inputs)
+    ("cpu",
+     torch.rand((1, 10)),
+     True,
+     "determistic",
+     (1, 20)
+     ),
 
-    assert output.shape == (1, 20)
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     True,
+     "determistic",
+     (1, 20)
+     ),
+
+    ("cpu",
+     torch.rand((1, 10)),
+     False,
+     "stochastic",
+     (1, 20)
+     ),
+
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     False,
+     "stochastic",
+     (1, 20)
+     ),
+
+    ("cpu",
+     torch.rand((1, 10)),
+     True,
+     "stochastic",
+     (1, 20)
+     ),
+
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     True,
+     "stochastic",
+     (1, 20)
+     ),
+]
 
 
-def test_forward_with_bias(fix_seed):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mode = "determistic"
+@ pytest.mark.parametrize("device, test_input, test_bias, test_mode, exptected_shape", forward_test_case)
+def test_forward(fix_seed,
+                 device,
+                 test_input,
+                 test_bias,
+                 test_mode,
+                 exptected_shape):
+    test_input = test_input.to(device)
+    model = BinarizedLinear(10, 20, bias=test_bias, mode=test_mode).to(device)
 
-    inputs = torch.rand((1, 10)).to(device)
-    model = BinarizedLinear(10, 20, bias=True, mode=mode).to(device)
-
-    output = model(inputs)
-
-    assert output.shape == (1, 20)
+    assert model(test_input).shape == exptected_shape
 
 
-def test_forward_clipping(fix_seed):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    mode = "determistic"
+clipping_test_case = [
+    ("cpu",
+     torch.rand((1, 10)),
+     False,
+     "determistic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
 
-    inputs = torch.rand((1, 10)).to(device)
-    model = BinarizedLinear(10, 20, bias=False, mode=mode).to(device)
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     False,
+     "determistic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
+
+    ("cpu",
+     torch.rand((1, 10)),
+     True,
+     "determistic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
+
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     True,
+     "determistic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
+
+    ("cpu",
+     torch.rand((1, 10)),
+     False,
+     "stochastic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
+
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     False,
+     "stochastic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
+
+    ("cpu",
+     torch.rand((1, 10)),
+     True,
+     "stochastic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
+
+    (torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+     torch.rand((1, 10)),
+     True,
+     "stochastic",
+     torch.tensor(1.),
+     torch.tensor(-1.)
+     ),
+]
+
+
+@ pytest.mark.parametrize("device, test_input, test_bias, test_mode, exptected_max_value, exptected_min_value", clipping_test_case)
+def test_clipping(fix_seed,
+                  device,
+                  test_input,
+                  test_bias,
+                  test_mode,
+                  exptected_max_value,
+                  exptected_min_value):
+
+    test_input = test_input.to(device)
+    model = BinarizedLinear(10, 20, bias=test_bias, mode=test_mode).to(device)
 
     with torch.no_grad():
         model.weight.mul_(100)
 
-    model(inputs)
+    model(test_input)
 
     with torch.no_grad():
-        assert(model.weight.min() >= torch.tensor(-1.))
-        assert(model.weight.max() <= torch.tensor(1.))
+        assert(model.weight.min() >= exptected_min_value)
+        assert(model.weight.max() <= exptected_max_value)

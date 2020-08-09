@@ -15,9 +15,12 @@ def fix_seed():
     torch.backends.cudnn.benchmark = False
 
 
-mode_test_case = [(torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
-                   torch.tensor(
-                       [[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]),
+mode_test_case = [(torch.tensor([[1.0, 1.0, 1.0],
+                                 [1.0, 1.0, 1.0],
+                                 [1.0, 1.0, 1.0]]),
+                   torch.tensor([[-1.0, 1.0, 1.0],
+                                 [1.0, -0.8, 1.0],
+                                 [1.0, -0.3, 1.0]]),
                    None,
                    "test")]
 
@@ -34,29 +37,53 @@ def test_supported_mode(fix_seed,
 
 forward_test_case = [
     # (test_input, test_weight, test_bias, test_mode, expected)
-    (torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
-     torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]),
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
      None,
      "deterministic",
-     torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])),
 
-    (torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
-     torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]),
+     torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]])),
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
      torch.tensor([1.0]),
      "deterministic",
-     torch.tensor([[2.0, 2.0, 2.0], [2.0, 2.0, 2.0], [2.0, 2.0, 2.0]])),
+     torch.tensor([[2.0, 2.0, 2.0],
+                   [2.0, 2.0, 2.0],
+                   [2.0, 2.0, 2.0]])),
 
-    (torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
-     torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]),
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
      None,
      "stochastic",
-     torch.tensor([[3.0, -1.0, -1.0], [3.0, -1.0, -1.0], [3.0, -1.0, -1.0]])),
+     torch.tensor([[3.0, -1.0, -1.0],
+                   [3.0, -1.0, -1.0],
+                   [3.0, -1.0, -1.0]])),
 
-    (torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
-     torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]),
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
      torch.tensor([1.0]),
      "stochastic",
-     torch.tensor([[4.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.0, 0.0]]))
+     torch.tensor([[4.0, 0.0, 0.0],
+                   [4.0, 0.0, 0.0],
+                   [4.0, 0.0, 0.0]]))
 ]
 
 
@@ -147,13 +174,19 @@ def test_backward_indirectly(fix_seed,
 
 directly_backward_test_case = [
     # (saved_tensors, needs_input_grad, grad_output, expected_weight_grad, expected_input_grad, expected_bias_grad)
-    ((torch.tensor([[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]], requires_grad=True),
+    ((torch.tensor([[1., 1., 1.],
+                    [1., 1., 1.],
+                    [1., 1., 1.]], requires_grad=True),
       torch.tensor([[1., -1.,  1.]]),
       torch.tensor([1])),
      (True, True, True, False),
-     torch.tensor([[1.], [1.], [1.]]),
+     torch.tensor([[1.],
+                   [1.],
+                   [1.]]),
      torch.tensor([[3., 3., 3.]]),
-     torch.tensor([[1., -1.,  1.], [1., -1.,  1.], [1., -1.,  1.]]),
+     torch.tensor([[1., -1.,  1.],
+                   [1., -1.,  1.],
+                   [1., -1.,  1.]]),
      torch.tensor(3.)
      )
 ]

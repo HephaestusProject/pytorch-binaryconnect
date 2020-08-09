@@ -17,8 +17,12 @@ def fix_seed():
 
 mode_test_case = [
     # (test_input, test_weight, test_bias, test_mode)
-    (torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]),
-     torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]),
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
      None,
      "test")
 ]
@@ -37,29 +41,45 @@ def test_supported_mode(fix_seed,
 
 forward_test_case = [
     # (test_input, test_weight, test_bias, test_mode, expected)
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]),
-     torch.tensor([[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]]),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]]),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]]),
      None,
      "deterministic",
      torch.tensor([[[[3.]]]])
      ),
 
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]),
-     torch.tensor([[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]]),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]]),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]]),
      torch.tensor([1.]),
      "deterministic",
      torch.tensor([[[[4.]]]])
      ),
 
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]),
-     torch.tensor([[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]]),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]]),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]]),
      None,
      "stochastic",
      torch.tensor([[[[1.]]]])
      ),
 
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]),
-     torch.tensor([[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]]),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]]),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]]),
      torch.tensor([1.]),
      "stochastic",
      torch.tensor([[[[2.]]]])
@@ -86,40 +106,68 @@ def test_forward(fix_seed,
 
 indirectly_backward_test_case = [
     # (test_input, test_weight, test_bias, test_mode, expected_weight_grad, expected_input_grad)
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]], requires_grad=True),
-     torch.tensor(
-         [[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]], requires_grad=True),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]], requires_grad=True),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]], requires_grad=True),
      None,
      "deterministic",
-     torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]),
-     torch.tensor([[[[-1.0, 1.0, 1.0], [1.0, -1.0, 1.0], [1.0, -1.0, 1.0]]]])
+     torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]]),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -1.0, 1.0],
+                     [1.0, -1.0, 1.0]]]])
      ),
 
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]], requires_grad=True),
-     torch.tensor(
-         [[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]], requires_grad=True),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]], requires_grad=True),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]], requires_grad=True),
      torch.tensor([1.]),
      "deterministic",
-     torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]),
-     torch.tensor([[[[-1.0, 1.0, 1.0], [1.0, -1.0, 1.0], [1.0, -1.0, 1.0]]]])
+     torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]]),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -1.0, 1.0],
+                     [1.0, -1.0, 1.0]]]])
      ),
 
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]], requires_grad=True),
-     torch.tensor(
-        [[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]], requires_grad=True),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]], requires_grad=True),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]], requires_grad=True),
      None,
      "stochastic",
-     torch.tensor([[[[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]]]]),
-     torch.tensor([[[[-1., -1., -1.], [1., -1.,  1.], [-1., -1., -1.]]]])
+     torch.tensor([[[[1., 1., 1.],
+                     [1., 1., 1.],
+                     [1., 1., 1.]]]]),
+     torch.tensor([[[[-1., -1., -1.],
+                     [1., -1.,  1.],
+                     [-1., -1., -1.]]]])
      ),
 
-    (torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]], requires_grad=True),
-     torch.tensor(
-        [[[[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]]]], requires_grad=True),
+    (torch.tensor([[[[1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0],
+                     [1.0, 1.0, 1.0]]]], requires_grad=True),
+     torch.tensor([[[[-1.0, 1.0, 1.0],
+                     [1.0, -0.8, 1.0],
+                     [1.0, -0.3, 1.0]]]], requires_grad=True),
      torch.tensor([1.]),
      "stochastic",
-     torch.tensor([[[[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]]]]),
-     torch.tensor([[[[-1.,  1.,  1.], [1., -1.,  1.], [-1.,  1., -1.]]]])
+     torch.tensor([[[[1., 1., 1.],
+                     [1., 1., 1.],
+                     [1., 1., 1.]]]]),
+     torch.tensor([[[[-1.,  1.,  1.],
+                     [1., -1.,  1.],
+                     [-1.,  1., -1.]]]])
      ),
 ]
 
@@ -156,14 +204,21 @@ def test_backward_indirectly(fix_seed,
 
 directly_backward_test_case = [
     # (saved_tensors, needs_input_grad, grad_output, expected_weight_grad, expected_input_grad, expected_bias_grad)
-    ((torch.tensor([[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]], requires_grad=True),
-      torch.tensor(
-          [[[[-1.0, 1.0, 1.0], [1.0, -1.0, 1.0], [1.0, -1.0, 1.0]]]], requires_grad=True),
+    ((torch.tensor([[[[1.0, 1.0, 1.0],
+                      [1.0, 1.0, 1.0],
+                      [1.0, 1.0, 1.0]]]], requires_grad=True),
+      torch.tensor([[[[-1.0, 1.0, 1.0],
+                      [1.0, -1.0, 1.0],
+                      [1.0, -1.0, 1.0]]]], requires_grad=True),
       torch.tensor([1])),
      (True, True, True, False),
      torch.tensor([[[[1.]]]]),
-     torch.tensor([[[[1., 1., 1.], [1., 1., 1.], [1., 1., 1.]]]]),
-     torch.tensor([[[[-1.,  1.,  1.], [1., -1.,  1.], [1.,  -1., 1.]]]]),
+     torch.tensor([[[[1., 1., 1.],
+                     [1., 1., 1.],
+                     [1., 1., 1.]]]]),
+     torch.tensor([[[[-1.,  1.,  1.],
+                     [1., -1.,  1.],
+                     [1.,  -1., 1.]]]]),
      torch.tensor(1.)
      ),
 ]
