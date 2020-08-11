@@ -3,7 +3,7 @@ from typing import Any, Optional
 import torch
 
 
-class BinaryLinear(torch.autograd.Function):
+class BinarizedLinear(torch.autograd.Function):
     r"""
     Binary Operation에 대한 커스텀 Forward/Backward 정의
     Binary Operation Method는 `Deterministic`과 `Stochastic`으로 구분됨
@@ -45,8 +45,8 @@ class BinaryLinear(torch.autograd.Function):
             if mode == "deterministic":
                 # torch.sign()함수는 Ternary로 Quantization 된다. [-1, 0, 1]
                 # 따라서 `0`에 대한 별도 처리를 해야 Binary weight를 가질 수 있다.
-                bin_weight = weight.sign()
-                bin_weight[bin_weight == 0] = 1
+                binarized_weight = weight.sign()
+                binarized_weight[binarized_weight == 0] = 1
             elif mode == "stochastic":
                 # weights를 sigmoid 입력으로 넣어 이를 확률값으로 변환한다. `sigmoid(weights)`
                 # 해당 확률값을 이용하여 [-1, 1]을 생성한다.
@@ -56,19 +56,21 @@ class BinaryLinear(torch.autograd.Function):
                 # p값을 먼저 구한다.
                 # [0, 1]사이의 값을 갖는 데이터에서 uniform 확률 분포로 데이터를 샘플링한다.
                 # sampling된 값들이 p값 이상을 갖으면 1, 그렇지 않으면 -1로 정의한다.
-                p = torch.sigmoid(weight)
-                uniform_matrix = torch.empty(p.shape).uniform_(0, 1)
-                bin_weight = (p >= uniform_matrix).type(torch.float32)
-                bin_weight[bin_weight == 0] = -1.0
+                binarized_probability = torch.sigmoid(weight)
+                uniform_matrix = torch.empty(
+                    binarized_probability.shape).uniform_(0, 1)
+                binarized_weight = (binarized_probability >=
+                                    uniform_matrix).type(torch.float32)
+                binarized_weight[binarized_weight == 0] = -1.0
             else:
                 raise RuntimeError(f"{mode} not supported")
 
-            output = input.mm(bin_weight.t())
+            output = input.mm(binarized_weight.t())
 
             if bias is not None:
                 output += bias.unsqueeze(0).expand_as(output)
 
-        ctx.save_for_backward(input, bin_weight, bias)
+        ctx.save_for_backward(input, binarized_weight, bias)
 
         return output
 
@@ -88,13 +90,13 @@ class BinaryLinear(torch.autograd.Function):
             (torch.Tensor) : Computational graph 앞으로 보내기위한 gradient 정보
         """
 
-        input, bin_weight, bias = ctx.saved_tensors
+        input, binarized_weight, bias = ctx.saved_tensors
 
         grad_input = grad_weight = grad_bias = None
 
         with torch.no_grad():
             if ctx.needs_input_grad[0]:
-                grad_input = grad_output.mm(bin_weight)
+                grad_input = grad_output.mm(binarized_weight)
             if ctx.needs_input_grad[1]:
                 grad_weight = grad_output.t().mm(input)
             if (bias is not None) and (ctx.needs_input_grad[2]):
@@ -103,4 +105,4 @@ class BinaryLinear(torch.autograd.Function):
         return grad_input, grad_weight, grad_bias, None
 
 
-binary_linear = BinaryLinear.apply
+binarized_linear = BinarizedLinear.apply

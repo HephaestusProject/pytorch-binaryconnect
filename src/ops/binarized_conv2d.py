@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 
 
-class BinaryConv2d(torch.autograd.Function):
+class BinarizedConv2d(torch.autograd.Function):
     r"""
     Binary Operation에 대한 커스텀 Forward/Backward 정의
     Binary Operation Method는 `Deterministic`과 `Stochastic`으로 구분됨
@@ -54,32 +54,34 @@ class BinaryConv2d(torch.autograd.Function):
             if mode == "deterministic":
                 # torch.sign()함수는 Ternary로 Quantization 된다. [-1, 0, 1]
                 # 따라서 `0`에 대한 별도 처리를 해야 Binary weight를 가질 수 있다.
-                bin_weight = weight.sign()
-                bin_weight[bin_weight == 0] = 1.0
+                binarized_weight = weight.sign()
+                binarized_weight[binarized_weight == 0] = 1.0
             elif mode == "stochastic":
                 # weights를 sigmoid 입력으로 넣어 이를 확률값으로 변환한다. `sigmoid(weights)`
                 # 해당 확률값을 이용하여 [-1, 1]을 생성한다.
                 # +1 if w >= p, where p = sigmoid(w)
                 # -1 else 1 - p
 
-                # p값을 먼저 구한다.
+                # binarized probability를 먼저 구한다.
                 # [0, 1]사이의 값을 갖는 데이터에서 uniform 확률 분포로 데이터를 샘플링한다.
                 # sampling된 값들이 p값 이상을 갖으면 1, 그렇지 않으면 -1로 정의한다.
-                p = torch.sigmoid(weight)
-                uniform_matrix = torch.empty(p.shape).uniform_(0, 1)
+                binarized_probability = torch.sigmoid(weight)
+                uniform_matrix = torch.empty(
+                    binarized_probability.shape).uniform_(0, 1)
                 uniform_matrix = uniform_matrix.to(weight.device)
-                bin_weight = (p >= uniform_matrix).type(torch.float32)
-                bin_weight[bin_weight == 0] = -1.0
+                binarized_weight = (binarized_probability >=
+                                    uniform_matrix).type(torch.float32)
+                binarized_weight[binarized_weight == 0] = -1.0
             else:
                 raise RuntimeError(f"{mode} not supported")
 
         with torch.no_grad():
             output = F.conv2d(
-                input, bin_weight, bias, stride, padding, dilation, groups
+                input, binarized_weight, bias, stride, padding, dilation, groups
             )
 
         # Save input, binarized weight, bias in context object
-        ctx.save_for_backward(input, bin_weight, bias)
+        ctx.save_for_backward(input, binarized_weight, bias)
         ctx.stride = stride
         ctx.padding = padding
         ctx.dilation = dilation
@@ -102,7 +104,7 @@ class BinaryConv2d(torch.autograd.Function):
         Returns:
             (torch.Tensor) : Computational graph 앞으로 보내기위한 gradient 정보
         """
-        input, bin_weight, bias = ctx.saved_tensors
+        input, binarized_weight, bias = ctx.saved_tensors
         stride = ctx.stride
         padding = ctx.padding
         dilation = ctx.dilation
@@ -113,7 +115,7 @@ class BinaryConv2d(torch.autograd.Function):
             if ctx.needs_input_grad[0]:
                 grad_input = torch.nn.grad.conv2d_input(
                     input.shape,
-                    bin_weight,
+                    binarized_weight,
                     grad_output,
                     stride,
                     padding,
@@ -123,7 +125,7 @@ class BinaryConv2d(torch.autograd.Function):
             if ctx.needs_input_grad[1]:
                 grad_weight = torch.nn.grad.conv2d_weight(
                     input,
-                    bin_weight.shape,
+                    binarized_weight.shape,
                     grad_output,
                     stride,
                     padding,
@@ -137,4 +139,4 @@ class BinaryConv2d(torch.autograd.Function):
         return grad_input, grad_weight, grad_bias, None, None, None, None, None
 
 
-binary_conv2d = BinaryConv2d.apply
+binarized_conv2d = BinarizedConv2d.apply

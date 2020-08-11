@@ -5,7 +5,7 @@ import pytest
 import pytorch_lightning
 import torch
 
-from src.ops.binarized_linear import BinaryLinear, binary_linear
+from src.ops.binarized_linear import BinarizedLinear, binarized_linear
 
 
 @pytest.fixture(scope="module")
@@ -15,224 +15,215 @@ def fix_seed():
     torch.backends.cudnn.benchmark = False
 
 
-def test_not_support_mode_binarized_linear(fix_seed):
-    inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
+mode_test_case = [(torch.tensor([[1.0, 1.0, 1.0],
+                                 [1.0, 1.0, 1.0],
+                                 [1.0, 1.0, 1.0]]),
+                   torch.tensor([[-1.0, 1.0, 1.0],
+                                 [1.0, -0.8, 1.0],
+                                 [1.0, -0.3, 1.0]]),
+                   None,
+                   "test")]
 
+
+@ pytest.mark.parametrize("test_input, test_weight, test_bias, test_mode",
+                          mode_test_case)
+def test_supported_mode(fix_seed,
+                        test_input,
+                        test_weight,
+                        test_bias,
+                        test_mode):
     with pytest.raises(RuntimeError):
-        binary_linear(inputs, weights, None, "test")
+        binarized_linear(test_input, test_weight, test_bias, test_mode)
 
 
-def test_foward_op_in_non_bias_deterministic_binarized_linear(fix_seed):
-    inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
+forward_test_case = [
+    # (test_input, test_weight, test_bias, test_mode, expected)
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
+     None,
+     "deterministic",
 
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
+     torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]])),
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
+     torch.tensor([1.0]),
+     "deterministic",
+     torch.tensor([[2.0, 2.0, 2.0],
+                   [2.0, 2.0, 2.0],
+                   [2.0, 2.0, 2.0]])),
 
-    result = binary_linear(inputs, weights, None, "deterministic")
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
+     None,
+     "stochastic",
+     torch.tensor([[3.0, -1.0, -1.0],
+                   [3.0, -1.0, -1.0],
+                   [3.0, -1.0, -1.0]])),
 
-    target_forward_op = torch.tensor(
-        [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
-    )
+    (torch.tensor([[1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0],
+                   [1.0, 1.0, 1.0]]),
+     torch.tensor([[-1.0, 1.0, 1.0],
+                   [1.0, -0.8, 1.0],
+                   [1.0, -0.3, 1.0]]),
+     torch.tensor([1.0]),
+     "stochastic",
+     torch.tensor([[4.0, 0.0, 0.0],
+                   [4.0, 0.0, 0.0],
+                   [4.0, 0.0, 0.0]]))
+]
+
+
+@ pytest.mark.parametrize("test_input, test_weight, test_bias, test_mode, expected",
+                          forward_test_case)
+def test_forward(fix_seed,
+                 test_input,
+                 test_weight,
+                 test_bias,
+                 test_mode,
+                 expected):
+    assert torch.allclose(input=binarized_linear(test_input, test_weight, test_bias, test_mode),
+                          other=expected,
+                          rtol=1e-04,
+                          atol=1e-04,
+                          equal_nan=True)
+
+
+indirectly_backward_test_case = [
+    # (test_input, test_weight, test_bias, test_mode, expected_weight_grad, expected_input_grad)
+    (torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True),
+     torch.tensor([[-0.8, -0.8, 0.3]],
+                  requires_grad=True),
+     None,
+     "deterministic",
+     torch.tensor([[1., 1., 1.]]),
+     torch.tensor([[-1., -1.,  1.]])
+     ),
+
+    (torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True),
+     torch.tensor([[1.0, -0.8, 0.3]],
+                  requires_grad=True),
+     torch.tensor([1]),
+     "deterministic",
+     torch.tensor([[1., 1., 1.]]),
+     torch.tensor([[1., -1.,  1.]])
+     ),
+
+    (torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True),
+     torch.tensor([[1.0, -0.8, 0.3]],
+                  requires_grad=True),
+     None,
+     "stochastic",
+     torch.tensor([[1., 1., 1.]]),
+     torch.tensor([[-1., -1., -1.]])
+     ),
+
+    (torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True),
+     torch.tensor([[1.0, -0.8, 0.3]],
+                  requires_grad=True),
+     torch.tensor([1]),
+     "deterministic",
+     torch.tensor([[1., 1., 1.]]),
+     torch.tensor([[1., -1., 1.]])
+     )
+]
+
+
+@ pytest.mark.parametrize("test_input, test_weight, test_bias, test_mode, expected_weight_grad, expected_input_grad",
+                          indirectly_backward_test_case)
+def test_backward_indirectly(fix_seed,
+                             test_input,
+                             test_weight,
+                             test_bias,
+                             test_mode,
+                             expected_weight_grad,
+                             expected_input_grad):
+
+    binarized_linear(test_input, test_weight, test_bias, test_mode).backward()
 
     assert torch.allclose(
-        input=result, other=target_forward_op, rtol=1e-04, atol=1e-04, equal_nan=True
-    )
+        input=test_input.grad,
+        other=expected_input_grad,
 
-
-def test_foward_op_in_bias_deterministic_binarized_linear(fix_seed):
-
-    inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
-
-    result = binary_linear(inputs, weights, torch.tensor([1.0]), "deterministic")
-
-    target_forward_op = torch.tensor(
-        [[2.0, 2.0, 2.0], [2.0, 2.0, 2.0], [2.0, 2.0, 2.0]]
-    )
-
-    assert torch.allclose(
-        input=result, other=target_forward_op, rtol=1e-04, atol=1e-04, equal_nan=True
-    )
-
-
-def test_foward_op_in_non_bias_stochastic_binarized_linear(fix_seed):
-    inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
-
-    result = binary_linear(inputs, weights, None, "stochastic")
-
-    target_forward_op = torch.tensor(
-        [[3.0, -1.0, -1.0], [3.0, -1.0, -1.0], [3.0, -1.0, -1.0]]
-    )
-
-    assert torch.allclose(
-        input=result, other=target_forward_op, rtol=1e-04, atol=1e-04, equal_nan=True
-    )
-
-
-def test_foward_op_in_bias_stochastic_binarized_linear(fix_seed):
-
-    inputs = torch.tensor([[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]])
-
-    weights = torch.tensor([[-1.0, 1.0, 1.0], [1.0, -0.8, 1.0], [1.0, -0.3, 1.0]])
-
-    result = binary_linear(inputs, weights, torch.tensor([1.0]), "stochastic")
-
-    target_forward_op = torch.tensor(
-        [[4.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.0, 0.0]]
-    )
-
-    assert torch.allclose(
-        input=result, other=target_forward_op, rtol=1e-04, atol=1e-04, equal_nan=True
-    )
-
-
-def test_backward_op_in_non_bias_deterministic_binarized_linear(fix_seed):
-    inputs = torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True)
-    weights = torch.tensor([[-0.8, -0.8, 0.3]], requires_grad=True)
-
-    binary_linear(inputs, weights, None, "deterministic").backward()
-
-    target_backward_op_weights_grad = torch.tensor([[1.0, 1.0, 1.0]])
-    target_backward_op_inputs_grad = torch.tensor([[-1.0, -1.0, 1.0]])
-
-    assert torch.allclose(
-        input=weights.grad,
-        other=target_backward_op_weights_grad,
         rtol=1e-04,
         atol=1e-04,
         equal_nan=True,
     )
 
     assert torch.allclose(
-        input=inputs.grad,
-        other=target_backward_op_inputs_grad,
+        input=test_weight.grad,
+        other=expected_weight_grad,
         rtol=1e-04,
         atol=1e-04,
         equal_nan=True,
     )
 
 
-def test_backward_op_in_bias_deterministic_binarized_linear(fix_seed):
-
-    inputs = torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True)
-
-    weights = torch.tensor([[1.0, -0.8, 0.3]], requires_grad=True)
-    bias = torch.tensor([1])
-
-    binary_linear(inputs, weights, bias, "deterministic").backward()
-
-    target_backward_op_weights_grad = torch.tensor([[1.0, 1.0, 1.0]])
-    target_backward_op_inputs_grad = torch.tensor([[1.0, -1.0, 1.0]])
-
-    assert torch.allclose(
-        input=weights.grad,
-        other=target_backward_op_weights_grad,
-        rtol=1e-04,
-        atol=1e-04,
-        equal_nan=True,
-    )
-
-    assert torch.allclose(
-        input=inputs.grad,
-        other=target_backward_op_inputs_grad,
-        rtol=1e-04,
-        atol=1e-04,
-        equal_nan=True,
-    )
+directly_backward_test_case = [
+    # (saved_tensors, needs_input_grad, grad_output, expected_weight_grad, expected_input_grad, expected_bias_grad)
+    ((torch.tensor([[1., 1., 1.],
+                    [1., 1., 1.],
+                    [1., 1., 1.]], requires_grad=True),
+      torch.tensor([[1., -1.,  1.]]),
+      torch.tensor([1])),
+     (True, True, True, False),
+     torch.tensor([[1.],
+                   [1.],
+                   [1.]]),
+     torch.tensor([[3., 3., 3.]]),
+     torch.tensor([[1., -1.,  1.],
+                   [1., -1.,  1.],
+                   [1., -1.,  1.]]),
+     torch.tensor(3.)
+     )
+]
 
 
-def test_backward_op_in_non_bias_stochastic_binarized_linear(fix_seed):
+@ pytest.mark.parametrize("saved_tensors, needs_input_grad, grad_output, expected_weight_grad, expected_input_grad, expected_bias_grad",
+                          directly_backward_test_case)
+def test_backward_directly(fix_seed,
+                           saved_tensors,
+                           needs_input_grad,
+                           grad_output,
+                           expected_weight_grad,
+                           expected_input_grad,
+                           expected_bias_grad):
 
-    inputs = torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True)
-    weights = torch.tensor([[1.0, -0.8, 0.3]], requires_grad=True)
-
-    binary_linear(inputs, weights, None, "stochastic").backward()
-
-    target_backward_op_weights_grad = torch.tensor([[1.0, 1.0, 1.0]])
-    target_backward_op_inputs_grad = torch.tensor([[-1.0, -1.0, -1.0]])
-
-    assert torch.allclose(
-        input=weights.grad,
-        other=target_backward_op_weights_grad,
-        rtol=1e-04,
-        atol=1e-04,
-        equal_nan=True,
-    )
-
-    assert torch.allclose(
-        input=inputs.grad,
-        other=target_backward_op_inputs_grad,
-        rtol=1e-04,
-        atol=1e-04,
-        equal_nan=True,
-    )
-
-
-def test_backward_op_in_bias_stochastic_binarized_linear(fix_seed):
-
-    inputs = torch.tensor([[1.0, 1.0, 1.0]], requires_grad=True)
-
-    weights = torch.tensor([[1.0, -0.8, 0.3]], requires_grad=True)
-    bias = torch.tensor([1])
-
-    binary_linear(inputs, weights, bias, "stochastic").backward()
-
-    target_backward_op_weights_grad = torch.tensor([[1.0, 1.0, 1.0]])
-    target_backward_op_inputs_grad = torch.tensor([[1.0, -1.0, 1.0]])
-
-    assert torch.allclose(
-        input=weights.grad,
-        other=target_backward_op_weights_grad,
-        rtol=1e-04,
-        atol=1e-04,
-        equal_nan=True,
-    )
-
-    assert torch.allclose(
-        input=inputs.grad,
-        other=target_backward_op_inputs_grad,
-        rtol=1e-04,
-        atol=1e-04,
-        equal_nan=True,
-    )
-
-
-def test_backward(fix_seed):
     class CTX:
-        saved_tensors = (
-            torch.tensor(
-                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], requires_grad=True
-            ),
-            torch.tensor([[1.0, -1.0, 1.0]]),
-            torch.tensor([1]),
-        )
-        needs_input_grad = (True, True, True, False)
+        def __init__(self, saved_tensors, needs_input_grad):
+            self.saved_tensors = saved_tensors
+            self.needs_input_grad = needs_input_grad
 
-    ctx = CTX()
-    grad_output = torch.tensor([[1.0], [1.0], [1.0]])
+    ctx = CTX(saved_tensors, needs_input_grad)
 
-    input_grad, weight_gard, bias_grad, _ = BinaryLinear.backward(ctx, grad_output)
-
-    target_backward_op_weights_grad = torch.tensor([[3.0, 3.0, 3.0]])
-    target_backward_op_inputs_grad = torch.tensor(
-        [[1.0, -1.0, 1.0], [1.0, -1.0, 1.0], [1.0, -1.0, 1.0]]
-    )
-    target_backward_op_bias_grad = torch.tensor(3.0)
-
-    assert torch.allclose(
-        input=weight_gard,
-        other=target_backward_op_weights_grad,
-        rtol=1e-04,
-        atol=1e-04,
-        equal_nan=True,
-    )
+    input_grad, weight_grad, bias_grad, _ = BinarizedLinear.backward(
+        ctx, grad_output)
 
     assert torch.allclose(
         input=input_grad,
-        other=target_backward_op_inputs_grad,
+        other=expected_input_grad,
+        rtol=1e-04,
+        atol=1e-04,
+        equal_nan=True,
+    )
+
+    assert torch.allclose(
+        input=weight_grad,
+        other=expected_weight_grad,
         rtol=1e-04,
         atol=1e-04,
         equal_nan=True,
@@ -240,7 +231,7 @@ def test_backward(fix_seed):
 
     assert torch.allclose(
         input=bias_grad,
-        other=target_backward_op_bias_grad,
+        other=expected_bias_grad,
         rtol=1e-04,
         atol=1e-04,
         equal_nan=True,
