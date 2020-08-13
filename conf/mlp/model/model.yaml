@@ -1,0 +1,8 @@
+type: BinaryLinear
+
+params:
+    width: 28
+    height: 28
+    channels: 1
+    mode: Stocastic
+    classes: 10

@@ -1,0 +1,38 @@
+type: Runner
+
+dataloader:
+    type: DataLoader
+    params:
+        num_workers: 48
+        batch_size: 200
+
+optimizer:
+    type: SGD
+    params:
+        learning_rate: 1e-2
+        momentum: 0
+
+scheduler:
+    type: ExponentialLR
+    params:
+        gamma: .96
+        verbose: True
+
+trainer:
+    type: Trainer
+    params:
+        max_epochs: 1000
+        gpus: -1
+        distributed_backend: "ddp"
+
+earlystopping:
+    type: EarlyStopping
+    params:
+        monitor: val_acc
+        mode: max
+        patience: 10
+        verbose: True
+
+experiments:
+    name: binaryconnect_mlp
+    output_dir: output/runs

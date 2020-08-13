@@ -1,0 +1,5 @@
+type: CIFAR10
+params:
+    path:
+        train: data/cifar10/
+        test: data/cifar10/

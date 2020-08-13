@@ -1,0 +1,5 @@
+type: MNIST
+params:
+    path:
+        train: data/mnist/
+        test: data/mnist/
