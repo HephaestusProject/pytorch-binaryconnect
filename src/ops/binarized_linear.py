@@ -57,14 +57,14 @@ class BinarizedLinear(torch.autograd.Function):
                 # [0, 1]사이의 값을 갖는 데이터에서 uniform 확률 분포로 데이터를 샘플링한다.
                 # sampling된 값들이 p값 이상을 갖으면 1, 그렇지 않으면 -1로 정의한다.
                 binarized_probability = torch.sigmoid(weight)
-                uniform_matrix = torch.empty(
-                    binarized_probability.shape).uniform_(0, 1)
-                binarized_weight = (binarized_probability >=
-                                    uniform_matrix).type(torch.float32)
+                uniform_matrix = torch.empty(binarized_probability.shape).uniform_(0, 1)
+                binarized_weight = (binarized_probability >= uniform_matrix).type(torch.float32)
                 binarized_weight[binarized_weight == 0] = -1.0
             else:
                 raise RuntimeError(f"{mode} not supported")
 
+            device = weight.device
+            binarized_weight = binarized_weight.to(device)
             output = input.mm(binarized_weight.t())
 
             if bias is not None:

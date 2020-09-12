@@ -4,5 +4,5 @@ params:
     width: 28
     height: 28
     channels: 1
-    mode: Stocastic
+    mode: stochastic
     classes: 10
