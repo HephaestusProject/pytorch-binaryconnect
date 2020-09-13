@@ -38,16 +38,21 @@ def get_config(hparams: Dict) -> DictConfig:
 
     return config
 
-def get_checkpoint_callback(config: DictConfig) -> Union[Callback, List[Callback]]:
+
+def build_execute_dir(config: DictConfig) -> Path:
     root_dir = Path(config.runner.experiments.output_dir) / Path(config.runner.experiments.name)
     next_version = get_next_version(root_dir)
-    checkpoint_dir = root_dir.joinpath(next_version)
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = root_dir.joinpath(next_version)
+    run_dir.mkdir(parents=True, exist_ok=True)
 
+    return run_dir
+
+
+def get_checkpoint_callback(run_dir: Path, config: DictConfig) -> Union[Callback, List[Callback]]:
     checkpoint_prefix = f"{config.model.type}"
     checkpoint_suffix = "_{epoch:02d}-{tr_loss:.2f}-{val_loss:.2f}-{tr_acc:.2f}-{val_acc:.2f}"
 
-    checkpoint_path = checkpoint_dir.joinpath(checkpoint_prefix + checkpoint_suffix)
+    checkpoint_path = run_dir.joinpath(checkpoint_prefix + checkpoint_suffix)
     checkpoint_callback = ModelCheckpoint(
         filepath=checkpoint_path, save_top_k=2, save_weights_only=True
     )
@@ -55,30 +60,27 @@ def get_checkpoint_callback(config: DictConfig) -> Union[Callback, List[Callback
     return checkpoint_callback
 
 
-def get_logger_and_callbacks(
-    config: DictConfig,
-) -> Tuple[WandbLogger, Union[Callback, List[Callback]]]:
-
-    root_dir = Path(config.runner.experiments.output_dir) / Path(config.runner.experiments.name)
-    next_version = get_next_version(root_dir)
-    checkpoint_dir = root_dir.joinpath(next_version)
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+def get_wandb_logger(run_dir: Path, config: DictConfig) -> Tuple[WandbLogger]:
 
     wandb_logger = WandbLogger(
         name=str(config.runner.experiments.name),
-        save_dir=str(checkpoint_dir),
+        save_dir=str(run_dir),
         offline=True,
         version=next_version,
     )
 
-    checkpoint_prefix = f"{config.model.type}"
-    checkpoint_suffix = "_{epoch:02d}-{tr_loss:.2f}-{val_loss:.2f}-{tr_acc:.2f}-{val_acc:.2f}"
-    checkpoint_path = checkpoint_dir.joinpath(checkpoint_prefix + checkpoint_suffix)
-    checkpoint_callback = ModelCheckpoint(
-        filepath=checkpoint_path, save_top_k=2, save_weights_only=True
+    return wandb_logger
+
+
+def get_early_stopper(early_stopping_config: DictConfig):
+    return EarlyStopping(
+        monitor=early_stopping_config.params.monitor,
+        min_delta=0.00,
+        patience=early_stopping_config.params.patience,
+        verbose=early_stopping_config.params.verbose,
+        mode=early_stopping_config.params.mode,
     )
 
-    return wandb_logger, checkpoint_callback
 
 def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
 
@@ -111,14 +113,17 @@ def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
     )
     return train_dataloader, test_dataloader
 
+
 def train(hparams: dict):
     config = get_config(hparams=hparams)
 
-    wandb_logger, checkpoint_callback = get_logger_and_callbacks(config=config)
-    lr_logger = LearningRateLogger()
+    run_dir = build_execute_dir(config=config)
 
-    early_stop_callback = EarlyStopping(
-        monitor="val_acc", min_delta=0.00, patience=10, verbose=True, mode="max"
+    checkpoint_callback = get_checkpoint_callback(run_dir=run_dir, config=config)
+    wandb_logger = get_wandb_logger(run_dir=run_dir, config=config)
+    lr_logger = LearningRateLogger()
+    early_stop_callback = get_early_stopper(
+        early_stopping_config=config.runner.earlystopping.params
     )
 
     train_dataloader, test_dataloader = get_data_loaders(config=config)

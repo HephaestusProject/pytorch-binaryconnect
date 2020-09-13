@@ -23,7 +23,7 @@ trainer:
     params:
         max_epochs: 1000
         gpus: -1
-        distributed_backend: "ddp"
+        distributed_backend: ddp
 
 earlystopping:
     type: EarlyStopping
