@@ -152,7 +152,6 @@ class BinaryLinear(nn.Module):
             linear_layers_config=model_config.params.feature_layers.linear
         )
 
-        # TODO. L2-SVM으로 변경
         self.output_layer = _build_output_layer(
             output_layer_config=model_config.params.output_layer
         )
@@ -220,7 +219,6 @@ class BinaryConv(nn.Module):
             linear_layers_config=model_config.params.feature_layers.linear
         )
 
-        # TODO. L2-SVM으로 변경
         self.output_layer = _build_output_layer(
             output_layer_config=model_config.params.output_layer
         )

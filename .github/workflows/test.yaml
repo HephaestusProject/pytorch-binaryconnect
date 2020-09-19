@@ -19,7 +19,7 @@ jobs:
             matrix:
                 python-version:
                     - 3.x
-        timeout-minutes: 60
+        timeout-minutes: 20
 
         # Steps represent a sequence of tasks that will be executed as part of the job
         steps:

@@ -29,13 +29,15 @@ params:
         mode: *mode
 
       - in_feature: 1024
-        out_feature: *out_feature
+        out_feature: 1024
         bias: true
         batch_norm: true
         activation: null
         mode: *mode
 
   output_layer:
-    type: Softmax
+    type: Linear
     args:
-      dim: 1
+      in_feature: 1024
+      out_feature: *out_feature
+      bias: true
