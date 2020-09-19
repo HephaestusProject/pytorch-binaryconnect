@@ -7,6 +7,7 @@ from omegaconf import DictConfig
 from src.nn.binarized_conv2d import BinarizedConv2d
 from src.nn.binarized_linear import BinarizedLinear
 from torchsummary import summary as torch_summary
+from src.utils import load_class
 
 
 class BinarizedLinearBlock(nn.Module):
@@ -123,7 +124,7 @@ def _build_linear_layers(linear_layers_config):
 
 
 def _build_output_layer(output_layer_config):
-    return getattr(nn, output_layer_config["type"])(**output_layer_config["args"])
+    return load_class(module=nn, name=output_layer_config["type"], args=output_layer_config["args"])
 
 
 class BinaryLinear(nn.Module):

@@ -5,6 +5,7 @@ Usage:
 Available commands:    
     train
     predict
+    evaluate
     test
 Options:
     -h --help     Show this.

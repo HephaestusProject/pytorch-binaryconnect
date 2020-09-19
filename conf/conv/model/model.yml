@@ -122,6 +122,6 @@ params:
   output_layer:
     type: Linear
     args:
-      in_feature: 1024
-      out_feature: *out_feature
+      in_features: 1024
+      out_features: *out_feature
       bias: true

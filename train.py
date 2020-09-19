@@ -3,9 +3,9 @@ Usage:
     main.py train [options]
     main.py train (-h | --help)
 Options:
-    --dataset-config <dataset config path>  Path to YAML file for dataset configuration  [default: conf/dataset/dataset.yml] [type: path]
-    --model-config <model config path>  Path to YAML file for model configuration  [default: conf/model/model.yml] [type: path]
-    --runner-config <runner config path>  Path to YAML file for model configuration  [default: conf/runner/runner.yml] [type: path]            
+    --dataset-config <dataset config path>  Path to YAML file for dataset configuration  [default: conf/mlp/dataset/dataset.yml] [type: path]
+    --model-config <model config path>  Path to YAML file for model configuration  [default: conf/mlp/model/model.yml] [type: path]
+    --runner-config <runner config path>  Path to YAML file for model configuration  [default: conf/mlp/runner/runner.yml] [type: path]            
     -h --help  Show this.
 """
 from pathlib import Path
@@ -14,113 +14,37 @@ from typing import Dict, List, Tuple, Union
 import torchvision.transforms as transforms
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import Trainer, seed_everything
-from pytorch_lightning.callbacks import (Callback, EarlyStopping,
-                                         LearningRateLogger, ModelCheckpoint)
-from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import Callback, EarlyStopping, LearningRateLogger, ModelCheckpoint
+
 from torch.utils.data import DataLoader
-
-from src.dataset.dataset_registry import DataSetRegistry
-from src.model.net import DeepHash
+from src.model.net import BinaryLinear, BinaryConv
 from src.runner.runner import Runner
-from src.utils import get_next_version
+from src.utils import (
+    get_next_version,
+    get_config,
+    get_log_dir,
+    get_checkpoint_callback,
+    get_wandb_logger,
+    get_early_stopper,
+    get_data_loaders,
+    load_class,
+)
+from src.model import net as Net
 
 
-def get_config(hparams: Dict) -> DictConfig:
-    config = OmegaConf.create()
-
-    config_dir = Path(".")
-    model_config = OmegaConf.load(config_dir / hparams.get("--model-config"))
-    dataset_config = OmegaConf.load(config_dir / hparams.get("--dataset-config"))
-    runner_config = OmegaConf.load(config_dir / hparams.get("--runner-config"))
-
-    config.update(model=model_config, dataset=dataset_config, runner=runner_config)
-    OmegaConf.set_readonly(config, True)
-
-    return config
-
-
-def build_execute_dir(config: DictConfig) -> Path:
-    root_dir = Path(config.runner.experiments.output_dir) / Path(config.runner.experiments.name)
-    next_version = get_next_version(root_dir)
-    run_dir = root_dir.joinpath(next_version)
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    return run_dir
-
-
-def get_checkpoint_callback(run_dir: Path, config: DictConfig) -> Union[Callback, List[Callback]]:
-    checkpoint_prefix = f"{config.model.type}"
-    checkpoint_suffix = "_{epoch:02d}-{tr_loss:.2f}-{val_loss:.2f}-{tr_acc:.2f}-{val_acc:.2f}"
-
-    checkpoint_path = run_dir.joinpath(checkpoint_prefix + checkpoint_suffix)
-    checkpoint_callback = ModelCheckpoint(
-        filepath=checkpoint_path, save_top_k=2, save_weights_only=True
-    )
-
-    return checkpoint_callback
-
-
-def get_wandb_logger(run_dir: Path, config: DictConfig) -> Tuple[WandbLogger]:
-
-    wandb_logger = WandbLogger(
-        name=str(config.runner.experiments.name),
-        save_dir=str(run_dir),
-        offline=True,
-        version=next_version,
-    )
-
-    return wandb_logger
-
-
-def get_early_stopper(early_stopping_config: DictConfig):
-    return EarlyStopping(
-        monitor=early_stopping_config.params.monitor,
-        min_delta=0.00,
-        patience=early_stopping_config.params.patience,
-        verbose=early_stopping_config.params.verbose,
-        mode=early_stopping_config.params.mode,
-    )
-
-
-def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
-
-    dataset = DataSetRegistry.get(config.dataset.type)
-    train_dataset = dataset(
-        root=config.dataset.params.path.train,
-        train=True,
-        transform=transforms.ToTensor(),
-        download=True,
-    )
-    train_dataloader = DataLoader(
-        dataset=train_dataset,
-        batch_size=config.runner.dataloader.params.batch_size,
-        num_workers=config.runner.dataloader.params.num_workers,
-        drop_last=True,
-        shuffle=True,
-    )
-    test_dataset = dataset(
-        root=config.dataset.params.path.test,
-        train=False,
-        transform=transforms.ToTensor(),
-        download=True,
-    )
-    test_dataloader = DataLoader(
-        dataset=test_dataset,
-        batch_size=config.runner.dataloader.params.batch_size,
-        num_workers=config.runner.dataloader.params.num_workers,
-        drop_last=False,
-        shuffle=False,
-    )
-    return train_dataloader, test_dataloader
+def build_model(model_conf: DictConfig):
+    return load_class(module=Net, name=model_conf.type, args={"model_config": model_conf})
 
 
 def train(hparams: dict):
-    config = get_config(hparams=hparams)
+    config_list = ["--dataset-config", "--model-config", "--runner-config"]
+    config = get_config(hparams=hparams, options=config_list)
 
-    run_dir = build_execute_dir(config=config)
+    log_dir = get_log_dir(config=config)
+    log_dir.mkdir(parents=True, exist_ok=True)
 
-    checkpoint_callback = get_checkpoint_callback(run_dir=run_dir, config=config)
-    wandb_logger = get_wandb_logger(run_dir=run_dir, config=config)
+    checkpoint_callback = get_checkpoint_callback(log_dir=log_dir, config=config)
+    wandb_logger = get_wandb_logger(log_dir=log_dir, config=config)
     lr_logger = LearningRateLogger()
     early_stop_callback = get_early_stopper(
         early_stopping_config=config.runner.earlystopping.params
@@ -128,7 +52,9 @@ def train(hparams: dict):
 
     train_dataloader, test_dataloader = get_data_loaders(config=config)
 
-    model = DeepHash(hash_bits=config.model.params.hash_bits)
+    model = build_model(model_conf=config.model)
+    exit()
+    """
     runner = Runner(model=model, config=config)
 
     trainer = Trainer(
@@ -155,3 +81,4 @@ def train(hparams: dict):
     trainer.fit(
         model=runner, train_dataloader=train_dataloader, val_dataloaders=test_dataloader,
     )
+    """

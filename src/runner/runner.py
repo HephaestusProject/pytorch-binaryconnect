@@ -10,15 +10,7 @@ class Runner(LightningModule):
     def __init__(self, model: nn.Module, config: DictConfig):
         super().__init__()
         self.model = model
-        self.hparams.update({"dataset": f"{config.dataset.type}"})
-        self.hparams.update({"model": f"{config.model.type}"})
-        self.hparams.update(config.model.params)
-        self.hparams.update(config.runner.dataloader.params)
-        self.hparams.update({"optimizer": f"{config.runner.optimizer.params.type}"})
-        self.hparams.update(config.runner.optimizer.params)
-        self.hparams.update({"scheduler": f"{config.runner.scheduler.type}"})
-        self.hparams.update({"scheduler_gamma": f"{config.runner.scheduler.params.gamma}"})
-        self.hparams.update(config.runner.trainer.params)
+        self.hparams.update(config)
         print(self.hparams)
 
     def forward(self, x):
@@ -26,7 +18,9 @@ class Runner(LightningModule):
 
     def configure_optimizers(self):
         opt = SGD(params=self.model.parameters(), lr=self.hparams.learning_rate)
-        scheduler = MultiStepLR(opt, milestones=[self.hparams.max_epochs], gamma=self.hparams.scheduler_gamma)
+        scheduler = MultiStepLR(
+            opt, milestones=[self.hparams.max_epochs], gamma=self.hparams.scheduler_gamma
+        )
         return [opt], [scheduler]
 
     def training_step(self, batch, batch_idx):
