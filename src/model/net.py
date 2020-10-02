@@ -1,12 +1,13 @@
 import copy
+from typing import Dict, List, Optional
+
 import torch
 import torch.nn as nn
-from typing import Optional, List, Dict
 from omegaconf import DictConfig
+from torchsummary import summary as torch_summary
 
 from src.nn.binarized_conv2d import BinarizedConv2d
 from src.nn.binarized_linear import BinarizedLinear
-from torchsummary import summary as torch_summary
 from src.utils import load_class
 
 
@@ -50,13 +51,13 @@ class BinarizedConvBlock(nn.Module):
         self,
         in_channels: int,
         out_channels: int,
-        kernel_size: int,
-        stride: int,
-        padding: int,
-        dilation: int,
-        groups: int,
-        bias: bool,
-        padding_mode: str,
+        kernel_size: int = 3,
+        stride: int = 1,
+        padding: int = 0,
+        dilation: int = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = "zeros",
         batch_norm: bool = False,
         activation: Optional[Dict] = None,
         pool: Optional[Dict] = None,
@@ -88,17 +89,19 @@ class BinarizedConvBlock(nn.Module):
         self.pool = pool
         if self.pool:
             # yaml not supported tuple. omegaconf too
-            pool_dict = {
-                "type": pool.type,
-                "args": {
-                    "kernel_size": tuple(list(pool.args.kernel_size)),
-                    "stride": pool.args.stride,
-                    "padding": pool.args.padding,
-                    "dilation": pool.args.dilation,
-                    "return_indices": pool.args.return_indices,
-                    "ceil_mode": pool.args.ceil_mode,
-                },
-            }
+            pool_dict = dict(pool)
+
+            kernel_size = tuple(list(pool.args.kernel_size))
+
+            old_args = pool_dict.pop("args", None)
+            new_args = {}
+            for key in old_args.keys():
+                if key == "kernel_size":
+                    continue
+                new_args.update({key: old_args[key]})
+            new_args.update({"kernel_size": kernel_size})
+            pool_dict.update({"args": new_args})
+
             self.pool = getattr(nn, pool_dict["type"])(**pool_dict["args"])
 
     def forward(self, x):
@@ -157,6 +160,8 @@ class BinaryLinear(nn.Module):
             output_layer_config=model_config.params.output_layer
         )
 
+        self.loss_fn = self.loss_fn = nn.CrossEntropyLoss()
+
     def forward(self, x):
         x = x.view(-1, self.in_feature)
 
@@ -165,6 +170,9 @@ class BinaryLinear(nn.Module):
 
         x = self.output_layer(x)
         return x
+
+    def loss(self, x, y):
+        return self.loss_fn(x, y)
 
     def summary(self):
         # torchsummary only supported [cuda, cpu]. not cuda:0
@@ -224,6 +232,8 @@ class BinaryConv(nn.Module):
             output_layer_config=model_config.params.output_layer
         )
 
+        self.loss_fn = nn.CrossEntropyLoss()
+
     def forward(self, x):
         for conv_layer in self.conv_layers:
             x = conv_layer(x)
@@ -236,6 +246,9 @@ class BinaryConv(nn.Module):
         x = self.output_layer(x)
 
         return x
+
+    def loss(self, x, y):
+        return self.loss_fn(x, y)
 
     def summary(self):
         # torchsummary only supported [cuda, cpu]. not cuda:0

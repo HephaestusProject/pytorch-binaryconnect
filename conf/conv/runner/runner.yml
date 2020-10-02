@@ -1,37 +1,50 @@
-type: Runner
+runner:
+  type: Runner
 
-dataloader:
+  dataloader:
     type: DataLoader
     params:
-        num_workers: 48
-        batch_size: 50
+      num_workers: 48
+      batch_size: 50
 
-optimizer:
+  optimizer:
     type: Adam
     params:
-        learning_rate: 1e-3
+      lr: 1e-3
 
-scheduler:
+  scheduler:
     type: ExponentialLR
     params:
-        gamma: .96
-        verbose: True
+      gamma: .96
+      verbose: True
 
-trainer:
+  trainer:
     type: Trainer
     params:
-        max_epochs: 500
-        gpus: -1
-        distributed_backend: ddp
+      max_epochs: 1000
+      gpus: -1
+      distributed_backend: ddp
+      fast_dev_run: false
+      amp_level: "02"
+      row_log_interval: 10
+      weights_summary: top
+      reload_dataloaders_every_epoch: false
+      resume_from_checkpoint: null
+      benchmark: false
+      deterministic: true
+      num_sanity_val_steps: 5
+      overfit_batches: 0.0
+      precision: 32
+      profiler: true
 
-earlystopping:
+  earlystopping:
     type: EarlyStopping
     params:
-        monitor: val_acc
-        mode: max
-        patience: 10
-        verbose: True
+      # monitor: val_acc
+      mode: max
+      patience: 10
+      verbose: True
 
-experiments:
+  experiments:
     name: binaryconnect_conv
     output_dir: output/runs

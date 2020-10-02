@@ -1,9 +1,15 @@
+from typing import Tuple
+
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from omegaconf import DictConfig
 from pytorch_lightning.core import LightningModule
-from torch.optim import SGD
+from pytorch_lightning.metrics.functional import accuracy
+from torch import optim
 from torch.optim.lr_scheduler import ExponentialLR
+
+from src.utils import load_class
 
 
 class Runner(LightningModule):
@@ -11,63 +17,63 @@ class Runner(LightningModule):
         super().__init__()
         self.model = model
         self.hparams.update(config)
+        self.config = config
         print(self.hparams)
 
     def forward(self, x):
         return self.model(x)
 
     def configure_optimizers(self):
-        opt = SGD(params=self.model.parameters(), lr=self.hparams.learning_rate)
-        scheduler = MultiStepLR(
-            opt, milestones=[self.hparams.max_epochs], gamma=self.hparams.scheduler_gamma
-        )
+        args = dict(self.config.optimizer.params)
+        args.update({"params": self.model.parameters()})
+
+        opt = load_class(module=optim, name=self.config.optimizer.type, args=args)
+        scheduler = ExponentialLR(optimizer=opt, gamma=self.config.scheduler.params.gamma)
+
         return [opt], [scheduler]
+
+    def _comm_step(self, x, y):
+        y_hat = self(x)
+        loss = self.model.loss(y_hat, y)
+
+        pred = torch.argmax(y_hat, dim=1)
+        acc = accuracy(pred, y)
+
+        return y_hat, loss, acc
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self(x)
-        loss = cross_entropy(y_hat, y)
+        _, loss, acc = self._comm_step(x, y)
 
-        prediction = torch.argmax(y_hat, dim=1)
-        acc = (y == prediction).float().mean()
-
-        return {"loss": loss, "train_acc": acc}
-
-    def training_epoch_end(self, outputs):
-        avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
-        avg_acc = torch.stack([x["train_acc"] for x in outputs]).mean()
-        tqdm_dict = {"train_acc": avg_acc, "train_loss": avg_loss}
-        return {**tqdm_dict, "progress_bar": tqdm_dict}
+        result = pl.TrainResult(loss)
+        result.log(name="train_loss", value=loss)
+        result.log_dict(
+            {"train_loss": loss, "train_acc": acc},
+            prog_bar=True,
+            logger=True,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+        )
+        return result
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self(x)
-        loss = cross_entropy(y_hat, y)
-        prediction = torch.argmax(y_hat, dim=1)
-        number_of_correct_pred = torch.sum(y == prediction).item()
-        return {"val_loss": loss, "n_correct_pred": number_of_correct_pred, "n_pred": len(x)}
+        _, loss, acc = self._comm_step(x, y)
 
-    def validation_epoch_end(self, outputs):
-        total_count = sum([x["n_pred"] for x in outputs])
-        total_n_correct_pred = sum([x["n_correct_pred"] for x in outputs])
-        total_loss = torch.stack([x["val_loss"] * x["n_pred"] for x in outputs]).sum()
-        val_loss = total_loss / total_count
-        val_acc = total_n_correct_pred / total_count
-        tqdm_dict = {"val_acc": val_acc, "val_loss": val_loss}
-        return {**tqdm_dict, "progress_bar": tqdm_dict}
+        result = pl.EvalResult(early_stop_on=acc, checkpoint_on=acc)
+        result.log_dict(
+            {"val_loss": loss, "val_acc": acc},
+            prog_bar=True,
+            logger=True,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+        )
+
+        return result
 
     def test_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self(x)
-        loss = cross_entropy(y_hat, y)
-        prediction = torch.argmax(y_hat, dim=1)
-        number_of_correct_pred = torch.sum(y == prediction).item()
-        return {"loss": loss, "n_correct_pred": number_of_correct_pred, "n_pred": len(x)}
-
-    def test_epoch_end(self, outputs):
-        total_count = sum([x["n_pred"] for x in outputs])
-        total_n_correct_pred = sum([x["n_correct_pred"] for x in outputs])
-        total_loss = torch.stack([x["loss"] * x["n_pred"] for x in outputs]).sum().item()
-        test_loss = total_loss / total_count
-        test_acc = total_n_correct_pred / total_count
-        return {"loss": test_loss, "acc": test_acc}
+        result = self.validation_step(batch, batch_idx)
+        result.rename_keys({"val_loss": "loss", "val_acc": "acc"})
+        return result

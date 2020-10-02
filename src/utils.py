@@ -1,15 +1,12 @@
-from typing import Tuple, Any, Dict, List, Union
 from pathlib import Path
-from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.callbacks import (
-    Callback,
-    EarlyStopping,
-    LearningRateLogger,
-    ModelCheckpoint,
-)
-from pytorch_lightning.loggers import WandbLogger
+from typing import Any, Dict, List, Tuple, Union
+
 import torchvision
 import torchvision.transforms as transforms
+from omegaconf import DictConfig, OmegaConf
+from pytorch_lightning.callbacks import (Callback, EarlyStopping,
+                                         LearningRateLogger, ModelCheckpoint)
+from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
 
 
@@ -82,7 +79,6 @@ def get_wandb_logger(log_dir: Path, config: DictConfig) -> Tuple[WandbLogger]:
 
 def get_early_stopper(early_stopping_config: DictConfig):
     return EarlyStopping(
-        monitor=early_stopping_config.monitor,
         min_delta=0.00,
         patience=early_stopping_config.patience,
         verbose=early_stopping_config.verbose,
