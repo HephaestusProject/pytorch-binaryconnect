@@ -1,11 +1,11 @@
 """
 Usage:
-    main.py train [options]
+    main.py train [options] [--dataset-config=<dataset config path>] [--model-config=<model config path>] [--runner-config=<runner config path>]
     main.py train (-h | --help)
 Options:
-    --dataset-config <dataset config path>  Path to YAML file for dataset configuration  [default: conf/conv/dataset/dataset.yml] [type: path]
-    --model-config <model config path>  Path to YAML file for model configuration  [default: conf/conv/model/model.yml] [type: path]
-    --runner-config <runner config path>  Path to YAML file for model configuration  [default: conf/conv/runner/runner.yml] [type: path]            
+    --dataset-config <dataset config path>  Path to YAML file for dataset configuration  [default: conf/mlp/dataset/dataset.yml] [type: path]
+    --model-config <model config path>  Path to YAML file for model configuration  [default: conf/mlp/model/model.yml] [type: path]
+    --runner-config <runner config path>  Path to YAML file for model configuration  [default: conf/mlp/runner/runner.yml] [type: path]            
     -h --help  Show this.
 """
 from pathlib import Path
@@ -39,35 +39,31 @@ def build_model(model_conf: DictConfig):
 def train(hparams: dict):
     config_list = ["--dataset-config", "--model-config", "--runner-config"]
     config = get_config(hparams=hparams, options=config_list)
-    print(config)
-    exit()
+
     log_dir = get_log_dir(config=config)
     log_dir.mkdir(parents=True, exist_ok=True)
 
     checkpoint_callback = get_checkpoint_callback(log_dir=log_dir, config=config)
-    # wandb_logger = get_wandb_logger(log_dir=log_dir, config=config)
+    wandb_logger = get_wandb_logger(log_dir=log_dir, config=config)
     lr_logger = LearningRateLogger()
     early_stop_callback = get_early_stopper(
         early_stopping_config=config.runner.earlystopping.params
     )
 
     train_dataloader, test_dataloader = get_data_loaders(config=config)
-
     model = build_model(model_conf=config.model)
-
     runner = Runner(model=model, config=config.runner)
-
     trainer = Trainer(
         distributed_backend=config.runner.trainer.distributed_backend,
         fast_dev_run=False,
         gpus=config.runner.trainer.params.gpus,
         amp_level="O2",
-        # logger=wandb_logger,
+        logger=wandb_logger,
         row_log_interval=10,
         callbacks=[lr_logger],
         early_stop_callback=early_stop_callback,
         checkpoint_callback=checkpoint_callback,
-        max_epochs=2,  # config.runner.trainer.params.max_epochs,
+        max_epochs=config.runner.trainer.params.max_epochs,
         weights_summary="top",
         reload_dataloaders_every_epoch=False,
         resume_from_checkpoint=None,

@@ -42,7 +42,7 @@ runner:
     params:
       # monitor: val_acc
       mode: max
-      patience: 10
+      patience: 500
       verbose: True
 
   experiments:

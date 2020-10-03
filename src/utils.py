@@ -1,13 +1,43 @@
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
+import torch
 import torchvision
 import torchvision.transforms as transforms
+import numpy as np
+from PIL import Image
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.callbacks import (Callback, EarlyStopping,
-                                         LearningRateLogger, ModelCheckpoint)
+from pytorch_lightning.callbacks import Callback, EarlyStopping, LearningRateLogger, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
+
+
+class CGN(object):
+    def __init__(self, s: float = 1.0, l: float = 1e-2, e: float = 1e-8):
+        """
+        Args:
+            s (int): constant
+            l (int): lambda
+            e (float): epsilon
+        """
+        self.s = torch.tensor(s, requires_grad=False)
+        self.l = torch.tensor(l, requires_grad=False)
+        self.e = torch.tensor(e, requires_grad=False)
+
+    def __call__(self, img: torch.Tensor):
+        """
+        Args:
+            img (torch.Tensor): Image
+
+        Returns:
+            torch.Tensor: GCN image.
+        """
+        with torch.no_grad():
+            mean = (torch.tensor(1.0) / torch.prod(torch.tensor(img.shape))) * torch.sum(img)
+            diff = img - mean
+            std = torch.sqrt(self.l + torch.sum(torch.pow(diff, 2)))
+
+            return self.s * (diff / max(self.e, std))
 
 
 def get_next_version(root_dir: Path):
@@ -52,7 +82,7 @@ def get_log_dir(config: DictConfig) -> Path:
 
 def get_checkpoint_callback(log_dir: Path, config: DictConfig) -> Union[Callback, List[Callback]]:
     checkpoint_prefix = f"{config.model.type}"
-    checkpoint_suffix = "_{epoch:02d}-{tr_loss:.2f}-{val_loss:.2f}-{tr_acc:.2f}-{val_acc:.2f}"
+    checkpoint_suffix = "_{epoch:02d}-{train_loss:.2f}-{val_loss:.2f}-{train_acc:.2f}-{val_acc:.2f}"
 
     checkpoint_path = log_dir.joinpath(checkpoint_prefix + checkpoint_suffix)
     checkpoint_callback = ModelCheckpoint(
@@ -90,7 +120,7 @@ def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
 
     args = dict(config.dataset.params)
     args["train"] = True
-    args["transform"] = transforms.ToTensor()
+    args["transform"] = transforms.Compose([transforms.ToTensor(), CGN(s=1.0, l=1e-2, e=1e-8)])
     train_dataset = load_class(module=torchvision.datasets, name=config.dataset.type, args=args)
 
     train_dataloader = DataLoader(
@@ -116,3 +146,14 @@ def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
 
 def load_class(module: Any, name: str, args: Dict):
     return getattr(module, name)(**args)
+
+
+if __name__ == "__main__":
+
+    transform = transforms.Compose([transforms.ToTensor(), CGN(s=1.0, l=1e-2, e=1e-8)])
+    train_dataset = torchvision.datasets.CIFAR10(
+        root="./data", train=True, download=True, transform=transform
+    )
+    for img, label in train_dataset:
+        print(img)
+        exit()
