@@ -7,9 +7,13 @@ import torchvision.transforms as transforms
 import numpy as np
 from PIL import Image
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.callbacks import Callback, EarlyStopping, LearningRateLogger, ModelCheckpoint
+from pytorch_lightning.callbacks import Callback, EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
+
+
+class InitializationError(Exception):
+    pass
 
 
 class CGN(object):
@@ -23,6 +27,7 @@ class CGN(object):
         self.s = torch.tensor(s, requires_grad=False)
         self.l = torch.tensor(l, requires_grad=False)
         self.e = torch.tensor(e, requires_grad=False)
+        self.mean = None
 
     def __call__(self, img: torch.Tensor):
         """
@@ -32,12 +37,32 @@ class CGN(object):
         Returns:
             torch.Tensor: GCN image.
         """
+        if not self.mean:
+            raise InitializationError("must call .train() before .self()")
+
         with torch.no_grad():
-            mean = (torch.tensor(1.0) / torch.prod(torch.tensor(img.shape))) * torch.sum(img)
-            diff = img - mean
+            diff = img - self.mean
             std = torch.sqrt(self.l + torch.sum(torch.pow(diff, 2)))
 
             return self.s * (diff / max(self.e, std))
+
+    def train(self, dataset: Dataset):
+
+        pixel_sum = torch.tensor(0.0, requires_grad=False)
+        image_shape = dataset[0][0].shape
+        num_image = len(dataset)
+
+        for data, _ in dataset:
+            with torch.no_grad():
+                pixel_sum += torch.sum(data)
+
+        self.mean = (
+            torch.tensor(1.0) / (torch.prod(torch.tensor(image_shape)) * num_image)
+        ) * pixel_sum
+
+        print(f"CGN mean is {self.mean}")
+
+        return None
 
 
 def get_next_version(root_dir: Path):
@@ -86,7 +111,7 @@ def get_checkpoint_callback(log_dir: Path, config: DictConfig) -> Union[Callback
 
     checkpoint_path = log_dir.joinpath(checkpoint_prefix + checkpoint_suffix)
     checkpoint_callback = ModelCheckpoint(
-        filepath=checkpoint_path, save_top_k=2, save_weights_only=True
+        filepath=checkpoint_path, save_top_k=2, save_weights_only=True, monitor="val_acc"
     )
 
     return checkpoint_callback
@@ -101,7 +126,7 @@ def get_wandb_logger(log_dir: Path, config: DictConfig) -> Tuple[WandbLogger]:
         save_dir=str(log_dir),
         offline=False,
         version=next_version,
-        project=str(config.runner.experiments.name),
+        project=str(config.runner.experiments.project_name),
     )
 
     return wandb_logger
@@ -113,15 +138,23 @@ def get_early_stopper(early_stopping_config: DictConfig):
         patience=early_stopping_config.patience,
         verbose=early_stopping_config.verbose,
         mode=early_stopping_config.mode,
+        monitor="val_acc",
     )
 
 
 def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
 
     args = dict(config.dataset.params)
+
     args["train"] = True
-    args["transform"] = transforms.Compose([transforms.ToTensor(), CGN(s=1.0, l=1e-2, e=1e-8)])
+    args["transform"] = transforms.Compose([transforms.ToTensor()])
     train_dataset = load_class(module=torchvision.datasets, name=config.dataset.type, args=args)
+
+    # cgn = CGN(s=10.0, l=1e-2, e=1e-8)
+    # cgn.train(dataset=train_dataset)
+
+    # args["transform"] = transforms.Compose([transforms.ToTensor(), cgn])
+    # train_dataset.transform = args["transform"]
 
     train_dataloader = DataLoader(
         dataset=train_dataset,
