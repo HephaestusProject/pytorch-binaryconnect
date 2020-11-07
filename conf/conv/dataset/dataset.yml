@@ -1,0 +1,8 @@
+dataset:
+    type: CIFAR10
+    params:
+        root: data/
+        train: null
+        transform: null
+        target_transform: null
+        download: true

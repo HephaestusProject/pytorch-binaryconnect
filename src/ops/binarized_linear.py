@@ -58,13 +58,13 @@ class BinarizedLinear(torch.autograd.Function):
                 # sampling된 값들이 p값 이상을 갖으면 1, 그렇지 않으면 -1로 정의한다.
                 binarized_probability = torch.sigmoid(weight)
                 uniform_matrix = torch.empty(binarized_probability.shape).uniform_(0, 1)
-                binarized_weight = (binarized_probability >= uniform_matrix).type(
-                    torch.float32
-                )
+                binarized_weight = (binarized_probability >= uniform_matrix).type(torch.float32)
                 binarized_weight[binarized_weight == 0] = -1.0
             else:
                 raise RuntimeError(f"{mode} not supported")
 
+            device = weight.device
+            binarized_weight = binarized_weight.to(device)
             output = input.mm(binarized_weight.t())
 
             if bias is not None:

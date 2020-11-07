@@ -1,0 +1,81 @@
+experiment_title: &exp_title binarized_conv_stochastic
+
+runner:
+  type: Runner
+
+  dataloader:
+    type: DataLoader
+    params:
+      num_workers: 48
+      batch_size: 128 # 50 in paper
+
+  optimizer:
+    type: Adam
+    params:
+      # initial points
+      # [0.5, 0.25, 0.1, 0.05, 0.025, 0.01]
+      lr: 0.25
+
+  scheduler: # ExponentialLR in paper
+    type: ExponentialLR
+    params:
+      # initial points
+      # [0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92]
+      gamma: .96
+
+    # type: StepLR
+    # params:
+    #   step_size: 10
+    #   gamma: 0.8
+    #   last_epoch: -1
+
+    # type: MultiStepLR
+    # params:
+    #   milestones: [5, 10, 15, 25, 45, 50, 55, 60, 100, 200]
+    #   gamma: .5
+    #   last_epoch: -1
+
+    # type: ReduceLROnPlateau
+    # monitor: train_acc
+    # params:
+    #   mode: max
+    #   factor: 0.9
+    #   patience: 1
+    #   threshold: 0.0004
+    #   threshold_mode: rel
+    #   cooldown: 0
+    #   min_lr: 0
+    #   eps: 0.00000008
+
+
+  trainer:
+    type: Trainer
+    params:
+      max_epochs: 1000
+      gpus: -1
+      distributed_backend: ddp
+      fast_dev_run: false
+      amp_level: "02"
+      row_log_interval: 10
+      weights_summary: top
+      reload_dataloaders_every_epoch: false
+      resume_from_checkpoint: null
+      benchmark: false
+      deterministic: true
+      num_sanity_val_steps: 5
+      overfit_batches: 0.0
+      precision: 32
+      profiler: true
+
+  earlystopping:
+    type: EarlyStopping
+    params:
+      # monitor: val_acc
+      mode: max
+      patience: 500
+      verbose: True
+
+  experiments:
+    name: binaryconnect_conv
+    project_name: *exp_title
+    output_dir: output/runs

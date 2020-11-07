@@ -1,0 +1,126 @@
+model:
+  type: BinaryConv
+
+  params:
+    width: 32
+    height: 32
+    channels: &in_channels 3
+    classes: &out_feature 10
+    mode: &mode stochastic # stochastic or deterministic
+
+    feature_layers:
+      conv:
+        - in_channels: *in_channels
+          out_channels: 128
+          kernel_size: 3
+          stride: 1
+          padding: 0
+          bias: true
+          padding_mode: zeros
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          pool: null
+          mode: *mode
+
+        - in_channels: 128
+          out_channels: 128
+          kernel_size: 3
+          stride: 1
+          padding: 0
+          bias: true
+          padding_mode: zeros
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          pool:
+            type: MaxPool2d
+            args:
+              kernel_size: [2, 2]
+              padding: 0
+          mode: *mode
+
+        - in_channels: 128
+          out_channels: 256
+          kernel_size: 3
+          stride: 1
+          padding: 0
+          bias: true
+          padding_mode: zeros
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          pool: null
+          mode: *mode
+
+        - in_channels: 256
+          out_channels: 256
+          kernel_size: 3
+          stride: 1
+          padding: 0
+          bias: true
+          padding_mode: zeros
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          pool:
+            type: MaxPool2d
+            args:
+              kernel_size: [2, 2]
+              padding: 0
+          mode: *mode
+
+        - in_channels: 256
+          out_channels: 512
+          kernel_size: 3
+          stride: 1
+          padding: 0
+          bias: true
+          padding_mode: zeros
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          pool: null
+          mode: *mode
+
+        - in_channels: 512
+          out_channels: 512
+          kernel_size: 3
+          stride: 1
+          padding: 0
+          bias: true
+          padding_mode: zeros
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          pool: null
+          mode: *mode
+      linear:
+        - in_feature: 512
+          out_feature: 1024
+          bias: true
+          batch_norm: true
+          activation: null
+          mode: *mode
+
+        - in_feature: 1024
+          out_feature: 1024
+          bias: true
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          mode: *mode
+
+    output_layer:
+      type: Linear
+      args:
+        in_features: 1024
+        out_features: *out_feature
+        bias: true
