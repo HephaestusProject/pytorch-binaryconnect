@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Union
 
 import torch
-
+from torch.nn.modules.utils import _pair
 from src.ops.binarized_conv2d import binarized_conv2d
 
 
@@ -30,13 +30,18 @@ class BinarizedConv2d(torch.nn.Conv2d):
         out_channels: int,
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]] = 1,
-        padding: Union[int, Tuple[int, int]] = 0,
+        padding: Union[int, Tuple[int, int]] = (0, 0),
         dilation: Union[int, Tuple[int, int]] = 1,
         groups: int = 1,
         bias: Optional[torch.Tensor] = None,
         padding_mode: str = "zeros",
         mode: str = "deterministic",
     ) -> torch.nn.Conv2d:
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
+
         super().__init__(
             in_channels,
             out_channels,

@@ -1,4 +1,5 @@
-experiment_title: &exp_title binarized_conv_stochastic
+project: &project BinaryConnect
+experiments: &title binarized_conv(deterministic)
 
 runner:
   type: Runner
@@ -14,14 +15,14 @@ runner:
     params:
       # initial points
       # [0.5, 0.25, 0.1, 0.05, 0.025, 0.01]
-      lr: 0.25
+      lr: 0.1
 
   scheduler: # ExponentialLR in paper
     type: ExponentialLR
     params:
       # initial points
       # [0.98, 0.97, 0.96, 0.95, 0.94, 0.93, 0.92]
-      gamma: .96
+      gamma: .5
 
     # type: StepLR
     # params:
@@ -70,12 +71,12 @@ runner:
   earlystopping:
     type: EarlyStopping
     params:
-      # monitor: val_acc
+      monitor: valid/accuracy
       mode: max
       patience: 500
       verbose: True
 
   experiments:
-    name: binaryconnect_conv
-    project_name: *exp_title
+    name: *title
+    project_name: *project
     output_dir: output/runs
