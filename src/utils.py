@@ -1,86 +1,43 @@
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
+import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
-import numpy as np
-from PIL import Image
 from omegaconf import DictConfig, OmegaConf
+from PIL import Image
 from pytorch_lightning.callbacks import Callback, EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 
 class InitializationError(Exception):
     pass
 
 
-class CGN(object):
-    def __init__(self, s: float = 1.0, l: float = 1e-2, e: float = 1e-8):
-        """
-        Args:
-            s (int): constant
-            l (int): lambda
-            e (float): epsilon
-        """
-        self.s = torch.tensor(s, requires_grad=False)
-        self.l = torch.tensor(l, requires_grad=False)
-        self.e = torch.tensor(e, requires_grad=False)
-        self.mean = None
+def get_next_version(root_dir: Path) -> str:
+    """generating folder name for managed version
 
-    def __call__(self, img: torch.Tensor):
-        """
-        Args:
-            img (torch.Tensor): Image
+    Args:
+        root_dir (Path): saving directory for log, model checkpoint
 
-        Returns:
-            torch.Tensor: GCN image.
-        """
-        if not self.mean:
-            raise InitializationError("must call .train() before .self()")
-
-        with torch.no_grad():
-            diff = img - self.mean
-            std = torch.sqrt(self.l + torch.sum(torch.pow(diff, 2)))
-
-            return self.s * (diff / max(self.e, std))
-
-    def train(self, dataset: Dataset):
-
-        pixel_sum = torch.tensor(0.0, requires_grad=False)
-        image_shape = dataset[0][0].shape
-        num_image = len(dataset)
-
-        for data, _ in dataset:
-            with torch.no_grad():
-                pixel_sum += torch.sum(data)
-
-        self.mean = (
-            torch.tensor(1.0) / (torch.prod(torch.tensor(image_shape)) * num_image)
-        ) * pixel_sum
-
-        print(f"CGN mean is {self.mean}")
-
-        return None
-
-
-def get_next_version(root_dir: Path):
+    Returns:
+        str: folder name for saving
+    """
     version_prefix = "v"
     if not root_dir.exists():
         next_version = 0
+
     else:
         existing_versions = []
         for child_path in root_dir.iterdir():
             if child_path.is_dir() and child_path.name.startswith(version_prefix):
                 existing_versions.append(int(child_path.name[len(version_prefix) :]))
 
-        if len(existing_versions) == 0:
-            last_version = -1
-        else:
-            last_version = max(existing_versions)
-
+        last_version = max(existing_versions) if len(existing_versions) > 1 else -1
         next_version = last_version + 1
+
     return f"{version_prefix}{next_version:0>3}"
 
 
@@ -98,7 +55,9 @@ def get_config(hparams: Dict, options: List) -> DictConfig:
 
 
 def get_log_dir(config: DictConfig) -> Path:
-    root_dir = Path(config.runner.experiments.output_dir) / Path(config.runner.experiments.name)
+    root_dir = Path(config.runner.experiments.output_dir) / Path(
+        config.runner.experiments.project_name
+    )
     next_version = get_next_version(root_dir)
     run_dir = root_dir.joinpath(next_version)
 
@@ -111,7 +70,7 @@ def get_checkpoint_callback(log_dir: Path, config: DictConfig) -> Union[Callback
 
     checkpoint_path = log_dir.joinpath(checkpoint_prefix + checkpoint_suffix)
     checkpoint_callback = ModelCheckpoint(
-        filepath=checkpoint_path, save_top_k=2, save_weights_only=True, monitor="val_acc"
+        filepath=checkpoint_path, save_top_k=2, save_weights_only=True, monitor="valid/accuracy"
     )
 
     return checkpoint_callback
@@ -132,13 +91,13 @@ def get_wandb_logger(log_dir: Path, config: DictConfig) -> Tuple[WandbLogger]:
     return wandb_logger
 
 
-def get_early_stopper(early_stopping_config: DictConfig):
+def get_early_stopper(early_stopping_config: DictConfig) -> EarlyStopping:
     return EarlyStopping(
         min_delta=0.00,
         patience=early_stopping_config.patience,
         verbose=early_stopping_config.verbose,
         mode=early_stopping_config.mode,
-        monitor="val_acc",
+        monitor=early_stopping_config.monitor,
     )
 
 
@@ -147,14 +106,8 @@ def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
     args = dict(config.dataset.params)
 
     args["train"] = True
-    args["transform"] = transforms.Compose([transforms.ToTensor()])
+    args["transform"] = None  # transforms.Compose([transforms.ToTensor()])
     train_dataset = load_class(module=torchvision.datasets, name=config.dataset.type, args=args)
-
-    # cgn = CGN(s=10.0, l=1e-2, e=1e-8)
-    # cgn.train(dataset=train_dataset)
-
-    # args["transform"] = transforms.Compose([transforms.ToTensor(), cgn])
-    # train_dataset.transform = args["transform"]
 
     train_dataloader = DataLoader(
         dataset=train_dataset,
@@ -165,7 +118,6 @@ def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
     )
 
     args["train"] = False
-
     test_dataset = load_class(module=torchvision.datasets, name=config.dataset.type, args=args)
     test_dataloader = DataLoader(
         dataset=test_dataset,
@@ -179,14 +131,3 @@ def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
 
 def load_class(module: Any, name: str, args: Dict):
     return getattr(module, name)(**args)
-
-
-if __name__ == "__main__":
-
-    transform = transforms.Compose([transforms.ToTensor(), CGN(s=1.0, l=1e-2, e=1e-8)])
-    train_dataset = torchvision.datasets.CIFAR10(
-        root="./data", train=True, download=True, transform=transform
-    )
-    for img, label in train_dataset:
-        print(img)
-        exit()

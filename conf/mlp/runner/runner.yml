@@ -1,3 +1,6 @@
+project: &project BinaryConnect
+experiments: &title binarized_conv(deterministic)
+
 runner:
   type: Runner
 
@@ -47,5 +50,6 @@ runner:
       verbose: True
 
   experiments:
-    name: binaryconnect_mlp
+    name: *title
+    project_name: *project
     output_dir: output/runs
