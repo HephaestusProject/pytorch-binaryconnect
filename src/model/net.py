@@ -140,6 +140,19 @@ class BinaryLinear(nn.Module):
     Refs: https://arxiv.org/pdf/1511.00363.pdf
     """
 
+    CLASS_MAP = {
+        0: "0",
+        1: "1",
+        2: "2",
+        3: "3",
+        4: "4",
+        5: "5",
+        6: "6",
+        7: "7",
+        8: "8",
+        9: "9",
+    }
+
     def __init__(self, model_config: DictConfig):
         super(BinaryLinear, self).__init__()
 
@@ -160,6 +173,7 @@ class BinaryLinear(nn.Module):
             output_layer_config=model_config.params.output_layer
         )
 
+        self.softmax = nn.Softmax(dim=1)
         self.loss_fn = self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, x):
@@ -173,6 +187,18 @@ class BinaryLinear(nn.Module):
 
     def loss(self, x, y):
         return self.loss_fn(x, y)
+
+    def batch_inference(self, x: torch.Tensor):
+        outputs = self.forward(x)
+        outputs = self.softmax(outputs)
+        outputs = outputs.to("cpu")
+        return torch.topk(outputs, 1)
+
+    def single_inference(self, x: torch.Tensor):
+        outputs = self.batch_inference(x)
+        indices = int(outputs.indices.squeeze().numpy())
+
+        return self.CLASS_MAP[indices]
 
     def summary(self):
         # torchsummary only supported [cuda, cpu]. not cuda:0
@@ -210,6 +236,19 @@ class BinaryConv(nn.Module):
     Refs: https://arxiv.org/pdf/1511.00363.pdf
     """
 
+    CLASS_MAP = {
+        0: "airplane",
+        1: "automobile",
+        2: "bird",
+        3: "cat",
+        4: "deer",
+        5: "dog",
+        6: "frog",
+        7: "horse",
+        8: "ship",
+        9: "truck",
+    }
+
     def __init__(self, model_config: DictConfig) -> None:
         super(BinaryConv, self).__init__()
 
@@ -232,6 +271,7 @@ class BinaryConv(nn.Module):
             output_layer_config=model_config.params.output_layer
         )
 
+        self.softmax = nn.Softmax(dim=1)
         self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, x):
@@ -249,6 +289,18 @@ class BinaryConv(nn.Module):
 
     def loss(self, x, y):
         return self.loss_fn(x, y)
+
+    def batch_inference(self, x: torch.Tensor):
+        outputs = self.forward(x)
+        outputs = self.softmax(outputs)
+        outputs = outputs.to("cpu")
+        return torch.topk(outputs, 1)
+
+    def single_inference(self, x: torch.Tensor):
+        outputs = self.batch_inference(x)
+        indices = int(outputs.indices.squeeze().numpy())
+
+        return self.CLASS_MAP[indices]
 
     def summary(self):
         # torchsummary only supported [cuda, cpu]. not cuda:0

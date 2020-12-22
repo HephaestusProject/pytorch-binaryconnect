@@ -1,0 +1,109 @@
+dataset:
+  type: MNIST
+  params:
+    root: data/
+    train: null
+    transform: null
+    target_transform: null
+    download: true
+model:
+  type: BinaryLinear
+
+  params:
+    width: 28
+    height: 28
+    channels: 1
+    in_feature: &in_feature 784
+    classes: &out_feature 10
+    mode: &mode deterministic # stochastic or deterministic
+
+    feature_layers:
+      linear:
+        - in_feature: *in_feature
+          out_feature: 1024
+          bias: true
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          mode: *mode
+
+        - in_feature: 1024
+          out_feature: 1024
+          bias: true
+          batch_norm: true
+          activation:
+            type: ReLU
+            args: {}
+          mode: *mode
+        # TODO. `in_feature` -> `in_features`
+        # TODO. `out_feature` -> `out_features`
+        - in_feature: 1024
+          out_feature: 1024
+          bias: true
+          batch_norm: true
+          activation: null
+          mode: *mode
+
+    output_layer:
+      type: Linear
+      args:
+        in_features: 1024
+        out_features: *out_feature
+        bias: true
+
+project: &project BinaryConnect
+experiments: &title MNIST_deterministic(MLP)
+
+runner:
+  type: Runner
+
+  dataloader:
+    type: DataLoader
+    params:
+      num_workers: 48
+      batch_size: 200
+
+  optimizer:
+    type: SGD
+    params:
+      lr: 1e-2
+      momentum: 0
+
+  scheduler:
+    type: ExponentialLR
+    params:
+      gamma: .96
+      verbose: True
+
+  trainer:
+    type: Trainer
+    params:
+      max_epochs: 1000
+      gpus: -1
+      distributed_backend: ddp
+      fast_dev_run: false
+      amp_level: "02"
+      row_log_interval: 10
+      weights_summary: top
+      reload_dataloaders_every_epoch: false
+      resume_from_checkpoint: null
+      benchmark: false
+      deterministic: true
+      num_sanity_val_steps: 5
+      overfit_batches: 0.0
+      precision: 32
+      profiler: true
+
+  earlystopping:
+    type: EarlyStopping
+    params:
+      # monitor: val_acc
+      mode: max
+      patience: 10
+      verbose: True
+
+  experiments:
+    name: *title
+    project_name: *project
+    output_dir: output/runs

@@ -106,7 +106,7 @@ def get_data_loaders(config: DictConfig) -> Tuple[DataLoader, DataLoader]:
     args = dict(config.dataset.params)
 
     args["train"] = True
-    args["transform"] = transforms.Compose([transforms.ToTensor()])
+    args["transform"] = None  # transforms.Compose([transforms.ToTensor()])
     train_dataset = load_class(module=torchvision.datasets, name=config.dataset.type, args=args)
 
     train_dataloader = DataLoader(
